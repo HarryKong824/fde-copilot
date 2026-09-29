@@ -16,11 +16,29 @@
 
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { createHash } from 'node:crypto'
-import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs'
+import { mkdtempSync, mkdirSync, writeFileSync, existsSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 
-const DEPLOYED = 'E:/DSH-desktop/DeepSeek Harness/data/dsh-home/profiles/web/node_modules/dsh-fde-phase/lib/index.js'
+// ══════════════════════════════════════════════════════════════════════
+// ⚠️ 这套**不是纯离线套件**：它 import 的是**部署副本**，判的是部署副本的 effect 语义
+//    （源 ↔ 副本是两回事）。没有那份部署的机器上跑不了 ⇒ **明确跳过**。
+//    设 FDE_DSH_HOME 指向你的 dsh-home 即可跑；退出码 77 = 跳过（由 _run_all_tests.sh 计数）。
+// ══════════════════════════════════════════════════════════════════════
+const DSH_HOME = process.env.FDE_DSH_HOME ?? 'E:/DSH-desktop/DeepSeek Harness/data/dsh-home'
+const DEPLOYED = join(DSH_HOME, 'profiles/web/node_modules/dsh-fde-phase/lib/index.js')
+if (!existsSync(DEPLOYED)) {
+  const why = [
+    `SKIP: 未找到已部署的 dsh-fde-phase（${DEPLOYED}）`,
+    '  这套判的是**部署副本**的 effect 语义，没有部署就没有被测对象。',
+    '  设 FDE_DSH_HOME 指向你的 dsh-home 后可跑；退出码 77 = 跳过。',
+    '  ⚠️ 本文件是被**跳过**的结果，不要当成通过。',
+  ].join('\n')
+  // 覆盖旧产物：否则上次跑出来的"通过"会被当成这次的结果
+  writeFileSync(join(dirname(fileURLToPath(import.meta.url)), '_phase_wiring_out.txt'), why + '\n', 'utf8')
+  console.log(why)
+  process.exit(77)
+}
 const { apply } = await import(pathToFileURL(DEPLOYED).href)
 
 // FDE_INVERT：故意把期望做反，验证本测试确实能抓 bug（手册 §8 第二条纪律）。

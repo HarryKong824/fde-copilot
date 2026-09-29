@@ -39,7 +39,26 @@ import { fileURLToPath } from 'node:url'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const OUT = process.env.FDE_OUT ?? join(HERE, '_e1_wiring_out.txt')
-const DEPLOYED = 'E:/DSH-desktop/DeepSeek Harness/data/dsh-home/profiles/web/node_modules'
+
+// ══════════════════════════════════════════════════════════════════════
+// ⚠️ 这套**不是纯离线套件**：它 import 你本机**已部署**的插件副本。
+//    没有那份部署的机器（CI / 别人第一次克隆）跑不了 ⇒ **明确跳过**，
+//    而不是假装通过 —— 设 FDE_DSH_HOME 指向你的 dsh-home 即可跑。
+//    退出码 77 = 跳过，由 `_run_all_tests.sh` 计数并在汇总行报出（见该脚本顶部说明）。
+// ══════════════════════════════════════════════════════════════════════
+const DSH_HOME = process.env.FDE_DSH_HOME ?? 'E:/DSH-desktop/DeepSeek Harness/data/dsh-home'
+const DEPLOYED = join(DSH_HOME, 'profiles/web/node_modules')
+if (!existsSync(DEPLOYED)) {
+  const why = [
+    `SKIP: 未找到已部署的 DSH（${DEPLOYED}）`,
+    '  这套要读本机已部署的插件副本，不是纯离线套件。',
+    '  设 FDE_DSH_HOME 指向你的 dsh-home 后可跑；退出码 77 = 跳过。',
+    '  ⚠️ 本文件是被**跳过**的结果，不要当成通过。',
+  ].join('\n')
+  writeFileSync(OUT, why + '\n', 'utf8')   // 覆盖旧产物，避免读到陈旧的「通过」
+  console.log(why)
+  process.exit(77)
+}
 const url = (rel) => pathToFileURL(join(DEPLOYED, rel)).href
 
 const lines = []

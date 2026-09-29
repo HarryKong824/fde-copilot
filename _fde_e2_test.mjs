@@ -508,28 +508,41 @@ check(
 lines.push('')
 lines.push('F 组：跨插件一致性 —— 对**部署实况**对拍，不是对源码常量自说自话')
 
-const PROFILE = 'E:/DSH-desktop/DeepSeek Harness/data/dsh-home/profiles/web/cordis.patch.yml'
+// ⚠️ F1/F2 判的是「**部署实况** ↔ 源码常量」，没有部署就没有可比对象 ⇒ 它们**不是纯离线断言**。
+//    旧写法在文件不存在时让 profileText 变空串 ⇒ 两条判红，把「没得比」说成了「不一致」。
+//    现在：本机没有部署就**明确跳过并报条数**，退出码 77（由 _run_all_tests.sh 计入 SKIP）。
+//    设 FDE_DSH_HOME 指向你的 dsh-home 即可跑。
+const DSH_HOME = process.env.FDE_DSH_HOME ?? 'E:/DSH-desktop/DeepSeek Harness/data/dsh-home'
+const PROFILE = join(DSH_HOME, 'profiles/web/cordis.patch.yml')
 const profileText = existsSync(PROFILE) ? readFileSync(PROFILE, 'utf8') : ''
-check(
-  '[F1] 部署配置里 gate 的 sandboxSubdirs 含 EXACTLY 一个值，且 === memory 的 EXPERIMENTS_SUBDIR',
-  (() => {
-    const m = profileText.match(/sandboxSubdirs:\s*\[([^\]]*)\]/)
-    if (!m) return false
-    const names = m[1].split(',').map((s) => s.trim().replace(/^['"]|['"]$/g, '')).filter(Boolean)
-    return names.length === 1 && names[0] === EXPERIMENTS_SUBDIR
-  })(),
-  `EXPERIMENTS_SUBDIR=${JSON.stringify(EXPERIMENTS_SUBDIR)}，配置片段=${JSON.stringify((profileText.match(/sandboxSubdirs:[^\n]*/) ?? ['（没找到）'])[0])}`
-)
-check(
-  '[F2] 部署配置里 protectedExtraRoots[0] === memory 的 projectRoot（同一锚点，不可能各自漂移）',
-  (() => {
-    const m = profileText.match(/protectedExtraRoots:\s*\[\s*&fde_state_root\s*'([^']+)'/)
-    const m2 = profileText.match(/id:\s*dsh-fde-memory[\s\S]{0,400}?projectRoot:\s*(\*fde_state_root|'([^']+)')/)
-    if (!m) return false
-    return Boolean(m2) && (m2[1] === '*fde_state_root' || m2[2] === m[1])
-  })(),
-  JSON.stringify((profileText.match(/protectedExtraRoots:[^\n]*/) ?? ['（没找到）'])[0])
-)
+const dshSkipped = profileText ? 0 : 2
+if (dshSkipped) {
+  lines.push('')
+  lines.push(`⚠️ 跳过 ${dshSkipped} 条：本机没有部署实况可对拍（${PROFILE} 不存在）`)
+  lines.push('   F1/F2 判的是「部署配置 ↔ 源码常量」，没有部署就没有可比对象。')
+  lines.push('   设 FDE_DSH_HOME 指向你的 dsh-home 即可跑；本套件随后以退出码 77 收尾（= 跳过）。')
+} else {
+  check(
+    '[F1] 部署配置里 gate 的 sandboxSubdirs 含 EXACTLY 一个值，且 === memory 的 EXPERIMENTS_SUBDIR',
+    (() => {
+      const m = profileText.match(/sandboxSubdirs:\s*\[([^\]]*)\]/)
+      if (!m) return false
+      const names = m[1].split(',').map((s) => s.trim().replace(/^['"]|['"]$/g, '')).filter(Boolean)
+      return names.length === 1 && names[0] === EXPERIMENTS_SUBDIR
+    })(),
+    `EXPERIMENTS_SUBDIR=${JSON.stringify(EXPERIMENTS_SUBDIR)}，配置片段=${JSON.stringify((profileText.match(/sandboxSubdirs:[^\n]*/) ?? ['（没找到）'])[0])}`
+  )
+  check(
+    '[F2] 部署配置里 protectedExtraRoots[0] === memory 的 projectRoot（同一锚点，不可能各自漂移）',
+    (() => {
+      const m = profileText.match(/protectedExtraRoots:\s*\[\s*&fde_state_root\s*'([^']+)'/)
+      const m2 = profileText.match(/id:\s*dsh-fde-memory[\s\S]{0,400}?projectRoot:\s*(\*fde_state_root|'([^']+)')/)
+      if (!m) return false
+      return Boolean(m2) && (m2[1] === '*fde_state_root' || m2[2] === m[1])
+    })(),
+    JSON.stringify((profileText.match(/protectedExtraRoots:[^\n]*/) ?? ['（没找到）'])[0])
+  )
+}
 
 // F3/F4：本套件绕开了 config.js（schemastery 无桩 ⇒ 加载不了），这两条是**代价的补丁**。
 const gateConfigSrc = readFileSync(join(GATE_LIB, 'config.js'), 'utf8')
@@ -571,7 +584,7 @@ check(
 
 // ── 收尾 ────────────────────────────────────────────────────────────────────
 lines.push('')
-lines.push(`通过 ${passed} / 失败 ${failed}`)
+lines.push(`通过 ${passed} / 失败 ${failed}${dshSkipped ? ` / 跳过 ${dshSkipped}（本机无部署实况）` : ''}`)
 if (failed > 0) {
   // ⚠️ 先 filter 再 push：边遍历 lines 边往 lines 里 push 是死循环。
   const reds = lines.filter((l) => l.includes('✗ '))
@@ -580,5 +593,6 @@ if (failed > 0) {
   for (const l of reds) lines.push(`  - ${l.trim().slice(2)}`)
 }
 writeFileSync(OUT, lines.join('\n') + '\n', 'utf8')
-console.log(`[e2-test] 通过 ${passed} / 失败 ${failed} ⇒ ${OUT}`)
-process.exitCode = failed > 0 ? 1 : 0
+console.log(`[e2-test] 通过 ${passed} / 失败 ${failed}${dshSkipped ? `，跳过 ${dshSkipped}（本机无部署实况）` : ''} ⇒ ${OUT}`)
+// 退出码优先级：**失败 > 跳过 > 0**（坏消息优先 —— 有红就不能用"跳过"盖住）
+process.exitCode = failed > 0 ? 1 : dshSkipped > 0 ? 77 : 0

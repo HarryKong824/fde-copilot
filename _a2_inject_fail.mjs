@@ -19,12 +19,15 @@
  * 期望：writeDecision 抛 "写盘失败"；目录里无 6-*.yaml 拋留空 final。
  */
 
-import { pathToFileURL } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 import { mkdtempSync, mkdirSync, readdirSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 
-const ROOT = 'C:/Users/DELL/WorkBuddy/2026-09-22-18-30-18'
+// 从**脚本自身位置**推导，不写作者本机路径 —— 否则换台机器 / CI 上必挂。
+// 实测：CI 上 `_fde_memory_decisions_test.mjs` 的 §6.7 就是被这一行拖红的
+//       （子脚本退出码非 0 ⇒ 父套件判红）。
+const ROOT = process.env.FDE_TEST_ROOT ?? dirname(fileURLToPath(import.meta.url))
 
 // 设测试钩子环境变量（在 import decisions.js 之前）
 process.env.FDE_INJECT_WRITE_FAIL = '1'

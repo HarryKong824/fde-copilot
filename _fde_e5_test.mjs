@@ -20,7 +20,7 @@
  * 退出码 0 = 全绿；1 = 有失败。
  */
 
-import { readFileSync, mkdtempSync, rmSync } from 'node:fs'
+import { readFileSync, mkdtempSync, rmSync, existsSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
@@ -458,22 +458,38 @@ ok('H5 message 里没有人话形式的 0.0%（红线在呈现层也成立）', 
 // ─────────────────────────────────────────────────────────────────────
 console.log('\n[I. 跨包字面量对拍：phaseAuditPath ↔ phase 的 auditPath]')
 
-const yml = readFileSync('E:/DSH-desktop/DeepSeek Harness/data/dsh-home/profiles/web/cordis.patch.yml', 'utf8')
-const gatePhasePath = /phaseAuditPath:\s*'([^']+)'/.exec(yml)?.[1]
-// phase 的 auditPath（在 dsh-fde-phase 条目下）—— 文件里只有一处 `auditPath:` 指向 phase.jsonl
-const phaseAuditPath = /auditPath:\s*'([^']*phase\.jsonl)'/.exec(yml)?.[1]
-ok('I1 gate 的 phaseAuditPath 已配置', typeof gatePhasePath === 'string' && gatePhasePath.length > 0, gatePhasePath)
-eq('I2 ★ 它与 phase 的 auditPath 指向**同一个文件**（两处字面量，跨插件不 import）', gatePhasePath, phaseAuditPath)
+// ⚠️ I 组判的是「**部署配置**里两处字面量一致」—— 没有部署就没有可比对象 ⇒ 不是纯离线断言。
+//    旧写法裸读 E: 盘 ⇒ 在没那份部署的机器上（CI）**顶层 ENOENT 崩溃**、连前面 H 组的结果都看不到。
+const DSH_HOME = process.env.FDE_DSH_HOME ?? 'E:/DSH-desktop/DeepSeek Harness/data/dsh-home'
+const PROFILE = join(DSH_HOME, 'profiles/web/cordis.patch.yml')
+const dshSkipped = existsSync(PROFILE) ? 0 : 2
+if (dshSkipped) {
+  console.log(`⚠️ 跳过 ${dshSkipped} 条：本机没有部署实况可对拍（${PROFILE} 不存在）`)
+  console.log('   I1/I2 判的是「部署配置里 phaseAuditPath ↔ auditPath」，没有部署就没有可比对象。')
+  console.log('   设 FDE_DSH_HOME 指向你的 dsh-home 即可跑；本套件以退出码 77 收尾（= 跳过）。')
+} else {
+  const yml = readFileSync(PROFILE, 'utf8')
+  const gatePhasePath = /phaseAuditPath:\s*'([^']+)'/.exec(yml)?.[1]
+  // phase 的 auditPath（在 dsh-fde-phase 条目下）—— 文件里只有一处 `auditPath:` 指向 phase.jsonl
+  const phaseAuditPath = /auditPath:\s*'([^']*phase\.jsonl)'/.exec(yml)?.[1]
+  ok('I1 gate 的 phaseAuditPath 已配置', typeof gatePhasePath === 'string' && gatePhasePath.length > 0, gatePhasePath)
+  eq('I2 ★ 它与 phase 的 auditPath 指向**同一个文件**（两处字面量，跨插件不 import）', gatePhasePath, phaseAuditPath)
+}
 
 // ─────────────────────────────────────────────────────────────────────
 rmSync(tmp, { recursive: true, force: true })
 
 console.log('\n=== 总结 ===')
-console.log('PASS ' + PASS + ' / FAIL ' + FAIL.length)
+console.log('PASS ' + PASS + ' / FAIL ' + FAIL.length + (dshSkipped ? ` / SKIP ${dshSkipped}（本机无部署实况）` : ''))
 if (FAIL.length > 0) {
   console.log('FAILED:')
   for (const f of FAIL) console.log('  - ' + f)
   process.exit(1)
+}
+// 退出码优先级：**失败 > 跳过 > 0**（坏消息优先 —— 有红就不能用"跳过"盖住）
+if (dshSkipped) {
+  console.log(`RESULT: 跳过（PASS ${PASS} / FAIL 0 / SKIP ${dshSkipped}，本机无部署实况）`)
+  process.exit(77)
 }
 console.log('RESULT: PASS')
 process.exit(0)

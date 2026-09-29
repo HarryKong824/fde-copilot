@@ -11,7 +11,7 @@
 | 项 | 要求 | 本项目验证环境 |
 |---|---|---|
 | 操作系统 | Windows | Windows 11（10.0.22631） |
-| Node.js | 与 DSH 宿主一致 | 已装（`node` 在 PATH 中） |
+| Node.js | **跑插件**：与 DSH 宿主一致<br>**跑回归 / precheck**：**≥ 22.15** | 已装（`node` 在 PATH 中）<br>⚠️ Node 20 **不行**：`zlib.zstdDecompressSync` 该版本没有这个导出（实测 20.20.2 无 / 22.15.0 有） |
 | DeepSeek Harness | **桌面应用形态**（`DeepSeek Harness.exe`） | 已安装 |
 | 磁盘 | 插件 + 审计链所需空间 | 审计链会持续增长，**需预留** |
 | 网络 | **无需外网**（零外部服务依赖） | — |
@@ -25,16 +25,23 @@
 在动手之前，先跑这三个——它们能在**不碰生产数据**的前提下发现大多数问题。
 
 ```bash
-# ① 插件自检（每个插件目录下都有）
-cd <插件目录>
+# ① 插件自检
+#    ⚠️ 实测只有 3 个插件带 precheck.mjs：dsh-fde-dsl / dsh-fde-phase / dsh-fde-memory
+#       dsh-fde-ontology-gate **没有**这一份（旧版本文档写「每个插件都有」，已更正）
+#    ⚠️ 必须在**已安装副本**目录里跑，在工作区源目录跑会解析到桩（退出码 2 = 结论无效）
+cd <已安装副本目录>
 node precheck.mjs
 
 # ② YAML 锚点/条目顺序 smoke check（退出码敏感）
 node _probe_yaml_anchor.mjs
 
-# ③ 离线回归全套件（41 套）
+# ③ 离线回归全套件
 bash _run_all_tests.sh
-#   期望最后一行：ALL-TESTS-GREEN
+#   期望最后两行（本机**没有**部署 DSH 时）：
+#   共 41 个套件；已跑 37；跳过 4（白名单内，需本机部署的 DSH）；失败 0；疑似空程序 0
+#   ALL-TESTS-GREEN
+#   本机**有**部署时是「已跑 41；跳过 0」。
+#   退出码：0 = 通过；1 = 有失败。
 ```
 
 > ⚠️ `_run_all_tests.sh` 会**预警小于 400 字节的脚本**。一条真实教训：`_fde_d5_test.mjs` 曾是 **0 字节**，而跑一个空程序 `node` 必然 **零断言 + EXIT=0** ⇒ 产物文件里写着「PASS 9 / FAIL 0」却**从未真跑过**。

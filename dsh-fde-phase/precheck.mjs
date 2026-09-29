@@ -19,8 +19,8 @@
  * 只有副本那条 node_modules 链解析得到真 SDK，工作区解析到的是桩。
  *
  * ```powershell
- * cd "E:\DSH-desktop\DeepSeek Harness\data\dsh-home\profiles\web\node_modules\dsh-fde-phase"
- * & "C:\Users\DELL\.workbuddy\binaries\node\versions\22.22.2-3\node.exe" precheck.mjs
+ * cd "<DSH_HOME>\profiles\web\node_modules\dsh-fde-phase"
+ * node precheck.mjs
  * ```
  *
  * 退出码：`0` 全部通过；`2` 跑在桩环境（位置不对，结论无效）；`3` 注册/校验失败。

@@ -1,21 +1,31 @@
-# 全量回归 —— 41 套离线套件，不需要 DSH
+# 全量回归 —— 离线套件，不需要 DSH 在跑（但有 4 套要本机已部署的 DSH，见下）
 #
 # ─────────────────────────────────────────────────────────────────────
-# 🔴 为什么跑在 Windows 上（这是实测结论，不是偏好）
+# 🔴 这份 CI 的两条事实都是**实测**出来的，不是偏好
 #
-# 2026-09-29 实测：同一次提交，跑在 ubuntu-latest 上 **41 套里挂了 9 套**。
-# 从失败断言能直接看出两处根因方向：
-#   · `_gate_mode_test.mjs`  → 断言原文「❌ enforce 下路径命中应拒」⇒ **路径语义**不同
-#   · `_shelltok_test.mjs`   → **shell 分词语义**不同
-#   · 其余若干在导入期就崩溃（Node.js v20.20.2 后无更多输出）
-# ⇒ 这套回归**是 Windows 专用的**，与 README 里「在 Windows 11 上开发与验证」一致。
+# ① **跑在 Windows 上**：2026-09-29 实测，同一次提交
+#      · windows-latest → 全绿
+#      · ubuntu-latest  → 41 套里挂 9 套
+#    失败断言指向两处根因方向：`_gate_mode_test.mjs`（**路径语义**）、
+#    `_shelltok_test.mjs`（**shell 分词语义**），其余若干在导入期崩溃。
+#    ⚠️ 本项目**没有**把它改成「Linux 上失败也允许通过」—— 那是假绿。
 #
-# ⚠️ 本项目**没有**把它改成「Linux 上失败也允许通过」——那是假绿，
-#    正是这套系统存在的意义所要反对的东西。正确做法是把 CI 钉在**真正验证过的平台**上，
-#    并把这条平台边界**写进文档**。
+# ② **Node 不能低于 22.15**（`package.json` 的 `engines` 同此）。
+#    这份 CI 第一次跑就红了 7 套，查下来是**三个独立原因**：
+#      · 2 套 —— `zlib.zstdDecompressSync` 在 Node 20 里**不存在**
+#                （实测：20.20.2 无 / 22.15.0 有）
+#      · 4 套 —— 它们**不是离线套件**：要 import 本机**已部署**的插件副本
+#      · 1 套 —— `_fde_memory_decisions_test.mjs` 的**子脚本**写死了作者本机路径
+#    ⇒ 前两条分别用「把下界写进 engines」与「明确跳过 + 报条数」解决；第三条已修。
+#    ⚠️ 这里**没有**把 Node 钉在 20 然后放宽判据 —— 那同样是把红的说成绿的。
 # ─────────────────────────────────────────────────────────────────────
 #
-# 判定口径沿用本项目的纪律：不看「有没有报错」，看**退出码**与 `ALL-TESTS-GREEN`。
+# 判定口径沿用本项目纪律：不看「有没有报错」，看**判定行**与**计数**。
+#
+# ⚠️ 「跑全量回归」那一步**故意不是门禁**：它跑在管道里（`| tee`），
+#    退出码会被 tee 顶掉。真正的门禁是下一步 —— 它同时核三件事：
+#      `ALL-TESTS-GREEN` / `失败 0` / `跳过数 == 4`。
+#    最后一条是防「跳过变成假绿出口」：跳过数一变（白名单被改、或有套件开始静默跳过），CI 立刻红。
 
 name: 回归测试
 
@@ -31,9 +41,14 @@ permissions:
 
 jobs:
   regression:
-    name: 41 套离线回归（Windows）
+    name: 离线回归（Windows · Node ${{ matrix.node }}）
     runs-on: windows-latest
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        # 声明的下界（engines: >=22.15）与当前开发机版本，各跑一遍
+        node: ['22.15.0', '24']
 
     steps:
       - name: 检出
@@ -42,7 +57,7 @@ jobs:
       - name: 安装 Node
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: ${{ matrix.node }}
 
       - name: 确认环境
         shell: bash
@@ -52,28 +67,32 @@ jobs:
           # 本脚本用 GNU 语法的 stat -c；Git Bash 支持，用来提前暴露环境不符
           stat -c '%s' _run_all_tests.sh
 
-      - name: 跑全量回归
+      - name: 跑全量回归（此步不作为门禁，理由见文件头 ⚠️）
         shell: bash
-        run: bash _run_all_tests.sh | tee regression.log
+        run: bash _run_all_tests.sh | tee regression.log || true
 
-      - name: 判定（口径：必须出现 ALL-TESTS-GREEN）
+      - name: 判定（ALL-TESTS-GREEN + 失败 0 + 跳过数 == 白名单条数）
         shell: bash
         run: |
-          if grep -q '^ALL-TESTS-GREEN$' regression.log; then
-            echo "✅ 41 套全绿"
-          else
-            echo "❌ 未达到 ALL-TESTS-GREEN —— 下面是逐套结果"
-            cat regression.log
-            exit 1
-          fi
+          cat regression.log
+          echo "----------------------------------------"
+          bad=0
+          grep -q '^ALL-TESTS-GREEN$' regression.log \
+            || { echo "❌ 没出现 ALL-TESTS-GREEN"; bad=1; }
+          grep -q '失败 0；' regression.log \
+            || { echo "❌ 有失败套件（或汇总行不见了）"; bad=1; }
+          grep -q '跳过 4（白名单内' regression.log \
+            || { echo "❌ 跳过数不是 4 —— 白名单被改了，或有套件在静默跳过"; bad=1; }
+          [ "$bad" -eq 0 ] || exit 1
+          echo "✅ 判定通过"
 
       - name: 汇总上传统计
         if: always()
         shell: bash
         run: |
           {
-            echo "### 回归结果"
+            echo "### 回归结果（Node ${{ matrix.node }}）"
             echo '```'
-            tail -8 regression.log
+            tail -6 regression.log
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
