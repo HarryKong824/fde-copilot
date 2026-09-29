@@ -129,4 +129,8 @@
 | [README.md](../README.md) | 项目主页 |
 | [LICENSE](../LICENSE) | ⚠️ 当前**未授予开源许可证**——先读它 |
 | [CHANGELOG.md](../CHANGELOG.md) | 版本变更记录 |
-| [CONTRIBUTING.md](../CONTRIBUTING.md) | 贡献指南 |
+| [CONTRIBUTING.md](../CONTRIBUTING.md) | 贡献指南（含**提交前自检清单**） |
+| [SECURITY.md](../SECURITY.md) | 🔴 报漏洞的私密渠道 + **已知安全边界** + PoC 的不适用场景 |
+| [CODE_OF_CONDUCT.md](../CODE_OF_CONDUCT.md) | 行为准则（含本项目特有的「批评要指向证据」约定） |
+| [.gitignore](../.gitignore) | ⚠️ **node_modules 有反常规处理**——改前先读 |
+| [.gitattributes](../.gitattributes) | ⚠️ **强制 LF**——删了会让 `.sh` 在 Windows 上坏掉 |

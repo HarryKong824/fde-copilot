@@ -113,7 +113,14 @@ node _deploy_diff.mjs      # 期望：ALL_MATCH
 ├── LICENSE                      ← ⚠️ 待定，见「许可证」
 ├── CHANGELOG.md
 ├── CONTRIBUTING.md
+├── SECURITY.md                  ← 报漏洞的私密渠道 + 已知安全边界
+├── CODE_OF_CONDUCT.md
 ├── .gitignore                   ← ⚠️ node_modules 有反常规处理，改前先读
+├── .gitattributes               ← ⚠️ 强制 LF；删了会让 .sh 在 Windows 上坏掉
+├── .github/
+│   ├── ISSUE_TEMPLATE/bug_report.md
+│   ├── ISSUE_TEMPLATE/feature_request.md
+│   └── PULL_REQUEST_TEMPLATE.md
 │
 ├── docs/                        ← 📚 17 份交付文档（从这里开始读）
 │   ├── README.md                  导航中枢
@@ -134,6 +141,9 @@ node _deploy_diff.mjs      # 期望：ALL_MATCH
 ├── _fixtures/                   ← 回归夹具
 └── node_modules/@deepseek-ai/   ← ⚠️ 测试桩，【必须保留】，见 .gitignore
 ```
+
+> ✅ **本结构已被验证**：从本仓库**克隆到干净目录**，`bash _run_all_tests.sh` → **41 套全绿**。
+> 这证明 `.gitignore` 里的 node_modules 例外有效、LF 归一化不破坏夹具。
 
 > ⚠️ **脚本为什么不放进子目录**：它们用 `./dsh-fde-phase/lib/state.js` 这类**相对导入**，
 > 移动会**直接破坏**已验证的 41 套回归。这是**不可移动的硬约束**，不是没整理。
