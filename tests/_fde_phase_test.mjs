@@ -592,6 +592,47 @@ t('guard shadow 模式同样判定（仅不拦）', () => {
   assert(r.deny && r.deny.includes('D1'), 'shadow 仍应判定 D1 未过')
 })
 
+// ---------- 🔴 已知缺口绊线：state.yaml 损坏 ⇒ guard 退到「初始状态」，门禁被整体跳过 ----------
+// 这条**故意断言「当前是坏的」**。它不是"把 bug 写成测试"，是个**绊线**：
+//   ① 谁真把它修好了 ⇒ 本条立刻变红，逼着去把 SECURITY.md §三 与 roadmap 一起改掉（否则又是一条 stale red）；
+//   ② 谁把 fail-closed 改得更差 ⇒ 下面两条对照先红。
+// 根因不在 guard，在 `dsh-fde-phase/lib/state.js:111-114` —— `readStateSync` 把 **ENOENT 与
+// 「文件在、但内容坏了 / 读不了」合进同一个 catch**，两支返回同一个 `DEFAULT_STATE`
+// （`current_phase:'0.1'`、`rollback_at:''`，`:29-38`）⇒ 调用方分不出「真读到」与「什么都没读到」。
+// 详见 SECURITY.md §三 同名条目。
+lines.push('[已知缺口绊线：state.yaml 损坏时的 fail-open]')
+function mkRawProject(rawText) {
+  const root = mkdtempSync(join(tmpdir(), 'fde-phase-bad-'))
+  const mem = join(root, 'memory')
+  mkdirSync(mem, { recursive: true })
+  writeFileSync(join(mem, 'state.yaml'), rawText)
+  return root
+}
+const okCfg = (root) => ({ projectRoot: root, ontologyRoot: mkOnto('x'), mode: 'enforce', gateAuditPath: 'g' })
+
+t('对照A：state.yaml 完好且刚回滚过（阶段6）⇒ 请求 0.2 因「观察期冻结」被拒', () => {
+  const root = mkRawProject(serializeState({
+    ...DEFAULT_STATE,
+    current_phase: '6',
+    rollback_at: new Date(Date.now() - 60_000).toISOString() // 1 分钟前回滚 ⇒ 24h 窗口内
+  }))
+  const r = evaluate({ name: 'fde_phase_advance', arguments: { to: '0.2' } }, okCfg(root), new D1Mirror())
+  assert(r.deny && r.deny.includes('观察期'), `对照应因观察期被拒，实际 ${r.deny}`)
+})
+t('对照B：state.yaml 完好、不在观察期（阶段6）⇒ 请求 0.2 因「跳跃」被拒', () => {
+  const root = mkRawProject(serializeState({ ...DEFAULT_STATE, current_phase: '6' }))
+  const r = evaluate({ name: 'fde_phase_advance', arguments: { to: '0.2' } }, okCfg(root), new D1Mirror())
+  assert(r.deny && r.deny.includes('跳跃'), `对照应因跳跃被拒，实际 ${r.deny}`)
+})
+t('🔴 已知缺口：state.yaml 损坏 ⇒ 上面两道拦阻**同时消失**，请求 0.2 被放行', () => {
+  // 二进制垃圾：一行都匹配不上 ⇒ parseState 原样返回 DEFAULT_STATE。
+  const root = mkRawProject('\u0000\u0001binary garbage, not yaml at all')
+  const r = evaluate({ name: 'fde_phase_advance', arguments: { to: '0.2' } }, okCfg(root), new D1Mirror())
+  assertEq(r.deny, undefined,
+    '若这里开始返回 deny ⇒ **缺口已被修好**：请同步更新 SECURITY.md §三 与 roadmap 后，把本条改成新判据')
+  assertEq(r.checks, [], '坏文件下 checks 为空 —— 正是"门禁被整体跳过"的直接证据')
+})
+
 // ================================================================ 收尾
 // 等所有异步用例结算（含 audit / state+lock / mirror.restoreSync），再写文件与判定退出码。
 await Promise.all(pending)
