@@ -170,7 +170,7 @@ node tests/_deploy_diff.mjs      # 期望：ALL_MATCH
 │   ├── _run_all_tests.sh          全量回归入口（**从任意目录调用都行**，脚本会自定位）
 │   ├── _*_test.mjs                41 套套件
 │   └── _fixtures/                 回归夹具
-├── tools/                       ← 115 个独立工具脚本（活验 / 勘察 / 一次性，**不进回归**）
+├── tools/                       ← 111 个独立工具脚本（活验 / 勘察 / 一次性，**不进回归**）
 │   └── README.md
 ├── evidence/                    ← 历史测试产物归档（⚠️ 已在 .gitignore，不进仓库）
 └── node_modules/@deepseek-ai/   ← ⚠️ 测试桩，【必须保留】，见 .gitignore
@@ -199,8 +199,7 @@ node tests/_deploy_diff.mjs      # 期望：ALL_MATCH
 | ↳ 其中 **4 套** | ⚠️ **要本机已部署 DSH**，否则**明确跳过** | `tests/_fde_e1_wiring_test.mjs`、`tests/_fde_e2_test.mjs`、`tests/_fde_e5_test.mjs`、`tests/_fde_phase_wiring_test.mjs`。<br>它们要读你本机已部署的插件副本 / 部署配置 ⇒ **不是纯离线套件**。<br>没有那份部署时它们 `exit 77`（跳过），汇总行会报出「跳过 4」。<br>设 `FDE_DSH_HOME=<你的 dsh-home>` 即可让它们真跑。 |
 | `tests/_deploy_diff.mjs` | ✅ **能**（限 Windows，且**需本机有部署**） | **不传参数 = 对拍全部 4 个插件**（就是下面部署步骤里那条命令）。<br>本机没有那份部署时它会明确报 `SKIP` 并 `exit 77`，**不会**报 `ALL_MATCH`；设 `FDE_DSH_HOME=<你的 dsh-home>` 即可真跑。<br>也支持原用法 `node tests/_deploy_diff.mjs <源目录> <副本目录>` 只对拍一对。<br>退出码：`0` 全一致 / `1` 有差异 / `77` 无部署可测（**不是**一致）。 |
 | `tools/_token_usage_report.mjs` | ✅ **能**（跨平台） | 纯统计工具，路径由命令行参数给。 |
-| `_wb_*.mjs`（**4 个**） | ❌ **不能** | WorkBuddy（早期并行实现方，**2026-09-28 退出**）时期的**只读**探测脚本（探它的本机 IPC / 读它的会话记录）。<br>**保留是刻意的**：它们是那段协作的诚实记录（见 [AI 工具清单](docs/05-ai-development/ai-tools.md)），且本仓库公开的代码里**没有任何一处引用它们**。<br>⚠️ 它们也含作者本机路径，**算在上面那 40 个里** —— 删掉它们会让「40 个」这个计数失效。 |
-| `_*_live*.mjs`、`_cc_*.mjs`、`_dsh_*.mjs` 等（**40 个**） | ❌ **不能开箱即跑** | 它们是**活验仪器**：① 需要 **DSH 正在运行**；② 里面写死了作者本机路径（`C:/Users/DELL/...`）与 launch-token 文件位置。<br>（口径：`grep -rl "Users/DELL"` 命中的**根目录脚本**共 40 个；
+| `_*_live*.mjs`、`_cc_*.mjs`、`_dsh_*.mjs` 等（**36 个**） | ❌ **不能开箱即跑** | 它们是**活验仪器**：① 需要 **DSH 正在运行**；② 里面写死了作者本机路径（`C:/Users/DELL/...`）与 launch-token 文件位置。<br>（口径：`grep -rl "Users/DELL"` 命中的**根目录脚本**共 36 个；
 另命中 **4 份文档**，逐一列出以免读者数不出来 —— `README.md`、`CHANGELOG.md`、
 `dsh-fde-ontology-gate/README.md`、`dsh-fde-ontology-gate/HANDOFF.md`。） |
 
@@ -235,7 +234,7 @@ node tests/_deploy_diff.mjs      # 期望：ALL_MATCH
 > CI 的判定步还额外核一件事：**跳过数必须正好是 4**（白名单一变就红），
 > 这样「跳过」不会变成一个能吞掉红灯的出口。
 
-> 🔴 **关于那 40 个活验脚本 —— 一个必须说清的事实**：
+> 🔴 **关于那 36 个活验脚本 —— 一个必须说清的事实**：
 > 它们含作者本机路径这一点**已知未修**。原因不是没发现，而是**修不了**：
 > 它们的行为**必须连着运行中的 DSH 才能验证**，而合并前无法验证的改动**不允许进主干**
 > —— 这正是本项目自己的纪律（"判据必须可复算"）。

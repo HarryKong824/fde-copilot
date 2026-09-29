@@ -41,5 +41,4 @@ _peek*.mjs        linguist-vendored
 _dump_*.mjs       linguist-vendored
 _scan_*.mjs       linguist-vendored
 _e5_probe_*.mjs   linguist-vendored
-_wb_*.mjs         linguist-vendored
 node_modules/**   linguist-vendored
