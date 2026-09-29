@@ -12,13 +12,13 @@
  * 退出码 0 = 全绿；非 0 = 有失败。FDE_INVERT=1 必红（exit code 敏感）。
  */
 
-import { pathToFileURL } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import { createHash } from 'node:crypto'
 
-const ROOT = 'C:/Users/DELL/WorkBuddy/2026-09-22-18-30-18'
+const ROOT = dirname(fileURLToPath(import.meta.url))
 const MEM_ROOT = ROOT + '/dsh-fde-memory'
 
 const sessionAuditUrl = pathToFileURL(MEM_ROOT + '/lib/session-audit.js').href

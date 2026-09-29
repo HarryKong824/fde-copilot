@@ -22,10 +22,10 @@
 
 import { readFileSync, mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
-import { pathToFileURL } from 'node:url'
+import { dirname, join } from 'node:path'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 
-const ROOT = 'C:/Users/DELL/WorkBuddy/2026-09-22-18-30-18'
+const ROOT = dirname(fileURLToPath(import.meta.url))
 const mUrl = pathToFileURL(ROOT + '/dsh-fde-ontology-gate/lib/metrics.js').href
 const mtUrl = pathToFileURL(ROOT + '/dsh-fde-ontology-gate/lib/metrics-tools.js').href
 

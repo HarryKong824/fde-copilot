@@ -110,14 +110,17 @@ node _deploy_diff.mjs      # 期望：ALL_MATCH
 ```
 .
 ├── README.md                    ← 本文件
-├── LICENSE                      ← MIT + 四项如实声明
+├── LICENSE                      ← 规范 MIT 正文（GitHub 可自动识别）
+├── DISCLOSURE.md                ← 四项如实披露（AI 生成 / 领域敏感 / 第三方宿主 / 非专业意见）
 ├── CHANGELOG.md
 ├── CONTRIBUTING.md
 ├── SECURITY.md                  ← 报漏洞的私密渠道 + 已知安全边界
 ├── CODE_OF_CONDUCT.md
+├── package.json                 ← `npm test` 入口（= bash _run_all_tests.sh）
 ├── .gitignore                   ← ⚠️ node_modules 有反常规处理，改前先读
 ├── .gitattributes               ← ⚠️ 强制 LF；删了会让 .sh 在 Windows 上坏掉
 ├── .github/
+│   ├── workflows/test.yml       ← CI：每次推送自动跑那 41 套
 │   ├── ISSUE_TEMPLATE/bug_report.md
 │   ├── ISSUE_TEMPLATE/feature_request.md
 │   └── PULL_REQUEST_TEMPLATE.md
@@ -147,6 +150,22 @@ node _deploy_diff.mjs      # 期望：ALL_MATCH
 
 > ⚠️ **脚本为什么不放进子目录**：它们用 `./dsh-fde-phase/lib/state.js` 这类**相对导入**，
 > 移动会**直接破坏**已验证的 41 套回归。这是**不可移动的硬约束**，不是没整理。
+
+### ⚠️ 哪些脚本你能跑，哪些跑不了
+
+**请先读这段，否则会在不该失败的地方失败。**
+
+| 类别 | 能否直接跑 | 说明 |
+|---|---|---|
+| `_*_test.mjs`（**41 套**） | ✅ **能**，且**与你的机器无关** | 路径从**脚本自身位置**推导，不含任何作者本机绝对路径。<br>2026-09-29 实测：在别的目录下也能全绿，且改坏插件会让对应套件**变红**（变异验证过）。 |
+| `_token_usage_report.mjs` | ✅ **能** | 纯统计工具，路径由命令行参数给。 |
+| `_*_live*.mjs`、`_cc_*.mjs`、`_dsh_*.mjs` 等（**43 个**） | ❌ **不能开箱即跑** | 它们是**活验仪器**：① 需要 **DSH 正在运行**；② 里面写死了作者本机路径（`C:/Users/DELL/...`）与 launch-token 文件位置。 |
+
+> 🔴 **关于那 43 个活验脚本 —— 一个必须说清的事实**：
+> 它们含作者本机路径这一点**已知未修**。原因不是没发现，而是**修不了**：
+> 它们的行为**必须连着运行中的 DSH 才能验证**，而合并前无法验证的改动**不允许进主干**
+> —— 这正是本项目自己的纪律（"判据必须可复算"）。
+> ⇒ **要复用它们，请先按你的环境改路径，并自己验一遍。**
 
 ---
 
@@ -239,8 +258,11 @@ node _deploy_diff.mjs      # 期望：ALL_MATCH
 > 1. `E:\ontologyRoot\` 里的医疗领域示例为**通用示例**，不来自真实客户业务、不含真实患者信息；
 > 2. 本项目**以 MIT 公开**。
 >
-> 📌 `LICENSE` 中另附**四项如实声明**（AI 生成 / 领域敏感内容 / 第三方宿主 / 不构成专业意见）——
-> 它们**不修改 MIT 条款**，只是披露事实。
+> 📌 另见 [`DISCLOSURE.md`](DISCLOSURE.md) —— **四项如实披露**（AI 生成 / 领域敏感内容 / 第三方宿主 / 不构成专业意见）。
+> 它**不修改 MIT 条款**，只是披露事实。
+>
+> ⚠️ **为什么披露要单独放**：原先这四项是附在 `LICENSE` 正文后面的，实测导致 **GitHub 的许可证识别器匹配不上**，
+> 仓库页面显示为 "Other" 而非 MIT。现在 `LICENSE` 只保留规范 MIT 正文，**许可证能被正确识别**，事实也照旧告知。
 
 **如需改用其它许可证**（Apache-2.0 / AGPL-3.0 / 专有），整体替换 `LICENSE` 即可。
 

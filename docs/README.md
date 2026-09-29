@@ -127,7 +127,8 @@
 | 文件 | 内容 |
 |---|---|
 | [README.md](../README.md) | 项目主页 |
-| [LICENSE](../LICENSE) | **MIT** + 四项如实声明（AI 生成 / 领域敏感 / 第三方宿主 / 不构成专业意见） |
+| [LICENSE](../LICENSE) | **MIT**（规范正文，GitHub 可自动识别） |
+| [DISCLOSURE.md](../DISCLOSURE.md) | **四项如实披露**（AI 生成 / 领域敏感 / 第三方宿主 / 不构成专业意见） |
 | [CHANGELOG.md](../CHANGELOG.md) | 版本变更记录 |
 | [CONTRIBUTING.md](../CONTRIBUTING.md) | 贡献指南（含**提交前自检清单**） |
 | [SECURITY.md](../SECURITY.md) | 🔴 报漏洞的私密渠道 + **已知安全边界** + PoC 的不适用场景 |

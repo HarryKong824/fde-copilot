@@ -14,11 +14,11 @@
  * 于是 checkResultCb 在 apply 后变成 null → 断言失败。修复后（去掉括号）监听器存活。
  */
 
-import { pathToFileURL } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 import { createHash } from 'node:crypto'
 import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 
 const DEPLOYED = 'E:/DSH-desktop/DeepSeek Harness/data/dsh-home/profiles/web/node_modules/dsh-fde-phase/lib/index.js'
 const { apply } = await import(pathToFileURL(DEPLOYED).href)
@@ -119,7 +119,7 @@ out.push('')
 out.push(`通过 ${passed} / 失败 ${failed}`)
 out.push(failed > 0 ? 'RESULT: FAIL' : 'RESULT: PASS')
 
-const OUT = join('C:/Users/DELL/WorkBuddy/2026-09-22-18-30-18', '_phase_wiring_out.txt')
+const OUT = join(dirname(fileURLToPath(import.meta.url)), '_phase_wiring_out.txt')
 // FDE_OUT（0030 §7）：跑轮次时显式给输出名 ⇒ 两轮不互相覆盖（缺省沿用原名）
 writeFileSync(process.env.FDE_OUT ?? OUT, out.join('\n') + '\n', 'utf8')
 console.log(`[phase-wiring-test] 结果已写入 ${OUT}：通过 ${passed} / 失败 ${failed}`)

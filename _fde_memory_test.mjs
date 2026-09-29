@@ -10,13 +10,13 @@
  * 退出码 0 = 全绿；非 0 = 有失败（exit code 敏感，0076 §6 验证 1）。
  */
 
-import { pathToFileURL } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import { createHash } from 'node:crypto'
 
-const ROOT = 'C:/Users/DELL/WorkBuddy/2026-09-22-18-30-18/dsh-fde-memory'
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), 'dsh-fde-memory')
 const configUrl = pathToFileURL(ROOT + '/lib/config.js').href
 const schemaUrl = pathToFileURL(ROOT + '/lib/schema-version.js').href
 const indexUrl = pathToFileURL(ROOT + '/lib/index.js').href

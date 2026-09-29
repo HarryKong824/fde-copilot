@@ -1,0 +1,22 @@
+{
+  "name": "fde-copilot",
+  "version": "0.0.1",
+  "private": true,
+  "description": "给 AI 助手装上工程护栏的 DSH 插件套件 —— 没通过校验就动不了，所有动作记在改不掉的账上",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "test": "bash _run_all_tests.sh",
+    "deploy:diff": "node _deploy_diff.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "keywords": [
+    "dsh-plugin",
+    "guardrails",
+    "audit-trail",
+    "fail-closed",
+    "ai-safety"
+  ]
+}

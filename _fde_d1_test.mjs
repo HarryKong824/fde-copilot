@@ -18,14 +18,14 @@
  * 退出码 0 = 全绿；非 0 = 有失败。`FDE_INVERT=1` 必红（exit code 敏感）。
  */
 
-import { pathToFileURL } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 
 // 🔴 `FDE_TEST_ROOT` 是给 `_fde_d1_mut.mjs`（变异注入）用的：它把两个插件的 lib 拷到沙箱、
 //    注入一处变异、再以本套件为判据跑一次。默认 = 真工作区 ⇒ 平时直接 `node _fde_d1_test.mjs` 不变。
-const ROOT = process.env.FDE_TEST_ROOT ?? 'C:/Users/DELL/WorkBuddy/2026-09-22-18-30-18'
+const ROOT = process.env.FDE_TEST_ROOT ?? dirname(fileURLToPath(import.meta.url))
 const MEM = ROOT + '/dsh-fde-memory/lib'
 const PH = ROOT + '/dsh-fde-phase/lib'
 /** 结果文件落在**被测树**里（沙箱跑时不会覆盖真工作区那份）。 */

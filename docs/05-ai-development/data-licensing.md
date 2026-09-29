@@ -164,7 +164,7 @@ out = out.replace(JWT_RE,    '[REDACTED:jwt]')
 > |---|---|---|
 > | 3.1 本体领域敏感性 | ✅ **已确认** | 为**通用示例**，不来自真实客户业务、不含真实患者信息 ⇒ **保持原样公开** |
 > | 3.2 DSH 插件分发许可 | ✅ **已确认** | 本项目**以 MIT 公开** |
-> | 3.3 标注「AI 生成」 | ✅ **已落地** | `README.md` §AI 生成声明 + `LICENSE` 第一节 |
+> | 3.3 标注「AI 生成」 | ✅ **已落地** | `README.md` §AI 生成声明 + `DISCLOSURE.md` 第一节 |
 > | 3.4 仓库不含运行时数据 | ✅ **已扫描** | 凭据扫描通过（6 处命中全为占位符/合成串）；`fde-state/` `fde-audit/` `ontologyRoot/` 已进 `.gitignore` |
 >
 > **以下保留原始分析，供日后复核或改判时参考。**
@@ -271,8 +271,8 @@ grep -rniE "(token|secret|password|credential|api[_-]?key|bearer|jwt)" . \
 
 | 项 | 状态 |
 |---|---|
-| 本仓库当前许可证 | ✅ **MIT**（见 `LICENSE`） |
-| 附加声明 | 四项如实披露（AI 生成 / 领域敏感 / 第三方宿主 / 不构成专业意见），**不修改 MIT 条款** |
+| 本仓库当前许可证 | ✅ **MIT**（见 `LICENSE`，规范正文，GitHub 可自动识别） |
+| 附加声明 | 四项如实披露（AI 生成 / 领域敏感 / 第三方宿主 / 不构成专业意见）—— 在 **`DISCLOSURE.md`**，**不修改 MIT 条款** |
 
 **当初的三种选项与最终取舍**：
 
@@ -295,5 +295,8 @@ grep -rniE "(token|secret|password|credential|api[_-]?key|bearer|jwt)" . \
 >
 > **仓库已于 2026-09-29 以 public 发布。**
 >
-> ⚠️ **但这不等于风险归零**：`LICENSE` 与 `README.md` 中的四项声明**必须随仓库一起保留**——
+> ⚠️ **但这不等于风险归零**：`DISCLOSURE.md` 与 `README.md` 中的四项声明**必须随仓库一起保留**——
 > 它们是把「AI 生成」「领域敏感」「第三方宿主」这三件事**如实告知使用者**的唯一凭据。
+>
+> 📌 **2026-09-29 补记**：这四项原先附在 `LICENSE` 正文后，实测导致 GitHub 把许可证识别成 **"Other"** 而非 MIT
+> ⇒ 已拆分为 `LICENSE`（纯 MIT 正文）+ `DISCLOSURE.md`（四项披露）。**拆分的理由是机器可识别性，不是条款变更。**

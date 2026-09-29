@@ -11,14 +11,14 @@
  * 退出码 0 = 全绿；非 0 = 有失败。
  */
 
-import { pathToFileURL } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, rmSync, readdirSync, openSync, closeSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import { createHash } from 'node:crypto'
 import { spawnSync } from 'node:child_process'
 
-const ROOT = 'C:/Users/DELL/WorkBuddy/2026-09-22-18-30-18'
+const ROOT = dirname(fileURLToPath(import.meta.url))
 const MEM_ROOT = ROOT + '/dsh-fde-memory'
 const DSL_ROOT = ROOT + '/dsh-fde-dsl'
 const PHASE_ROOT = ROOT + '/dsh-fde-phase'

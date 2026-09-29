@@ -1,0 +1,61 @@
+# 全量回归 —— 41 套离线套件，不需要 DSH
+#
+# ⚠️ 关于本文件的两点如实说明：
+#   ① 这 41 套回归**在 Windows 11 上开发并验证**；本工作流跑在 Ubuntu 上。
+#      ⇒ 首次运行的结果以 Actions 页面为准，**不要假定它一定是绿的**。
+#      已验证的事实：套件不依赖任何 Windows 专有工具（`pwsh` 只是测试数据里的字符串），
+#      且脚本内已无写死的本机绝对路径（路径从脚本自身位置推导）。
+#   ② `_run_all_tests.sh` 用 `stat -c %s`（GNU 语法）—— Linux 原生支持。
+#
+# 判定口径沿用本项目的纪律：不看"有没有报错"，看**退出码**与 `ALL-TESTS-GREEN`。
+
+name: 回归测试
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  regression:
+    name: 41 套离线回归
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: 检出
+        uses: actions/checkout@v4
+
+      - name: 安装 Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: 确认 Node 可用
+        run: node -v
+
+      - name: 跑全量回归
+        run: bash _run_all_tests.sh | tee /tmp/regression.log
+
+      - name: 判定（口径：必须出现 ALL-TESTS-GREEN）
+        run: |
+          if grep -q '^ALL-TESTS-GREEN$' /tmp/regression.log; then
+            echo "✅ 41 套全绿"
+          else
+            echo "❌ 未达到 ALL-TESTS-GREEN —— 下面是逐套结果"
+            cat /tmp/regression.log
+            exit 1
+          fi
+
+      - name: 汇总上传统计
+        if: always()
+        run: |
+          echo "### 回归结果" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          tail -8 /tmp/regression.log >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
