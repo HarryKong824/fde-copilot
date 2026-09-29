@@ -1,0 +1,45 @@
+# ─────────────────────────────────────────────────────────────
+#  ⚠️ 本文件不是可选的 —— 删掉它会让仓库在 Windows 上被检出成 CRLF，
+#     而 .sh 脚本一旦是 CRLF，bash 会直接报 `$'\r': command not found`。
+#
+#  背景：Windows 上 `core.autocrlf` 常为 true（本机实测就是 true），
+#        它会在【检出行】把 LF 转成 CRLF。实测暂存时 git 已警告：
+#          "LF will be replaced by CRLF the next time Git touches it"
+#  ⇒ 用本文件强制统一为 LF，保证跨平台一致。
+# ─────────────────────────────────────────────────────────────
+
+# 默认：自动识别文本，统一以 LF 存入仓库，检出时也保持 LF
+* text=auto eol=lf
+
+# 明确钉死必须为 LF 的类型（这些一旦是 CRLF 会直接坏掉）
+*.sh    text eol=lf
+*.mjs   text eol=lf
+*.js    text eol=lf
+*.json  text eol=lf
+*.md    text eol=lf
+*.yml   text eol=lf
+*.yaml  text eol=lf
+*.txt   text eol=lf
+
+# 二进制文件不做任何转换
+*.png   binary
+*.jpg   binary
+*.ico   binary
+*.zip   binary
+*.exe   binary
+
+# 审计链与夹具是 JSONL —— 逐行 JSON，必须保持原样
+*.jsonl text eol=lf
+
+# Linguist：把验证脚本标注为「非运行时源码」，避免污染语言统计
+_fde_*.mjs        linguist-vendored
+_cc_*.mjs         linguist-vendored
+_verify_*.mjs     linguist-vendored
+_predict_*.mjs    linguist-vendored
+_probe*.mjs       linguist-vendored
+_peek*.mjs        linguist-vendored
+_dump_*.mjs       linguist-vendored
+_scan_*.mjs       linguist-vendored
+_e5_probe_*.mjs   linguist-vendored
+_wb_*.mjs         linguist-vendored
+node_modules/**   linguist-vendored

@@ -1,0 +1,181 @@
+# 变更记录 · FDE Copilot
+
+> 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
+>
+> ⚠️ **本项目的版本实践与常规不同**，读之前请先看下面这段。
+
+---
+
+## ⚠️ 关于本项目的版本号
+
+| 事实 | 说明 |
+|---|---|
+| 四个插件版本号 | **全部停在 `0.0.1`**，开发期间**从未升过** |
+| 开发周期 | **7 天**（2026-09-23 — 09-29），期间 **35 次改动** |
+| **没有使用 git** | 无 commit 历史、无 tag |
+| 实际用的版本手段 | `_snapshots/<日期>-before/` **手工快照**（35 项） |
+
+**⇒ 本文的版本分组是「按开发阶段」划分的**，标识（如 `Stage 5`）**来自 `_inbox/` 的交接文档**，
+**不是磁盘上的 tag**。详见 [版本管理记录](docs/02-development/releases.md)。
+
+> 📌 **建议的下一步**：给四个插件从 `0.0.1` 起正式编号，每次改动 bump patch。
+
+---
+
+## [未发布]
+
+### 计划中（详见 [后续迭代规划](docs/04-retrospective/roadmap.md)）
+
+**P0**
+- 把项目纳入 git（当前无版本控制）
+- 建立成本台账（当前**无任何 Token/费用记录**）
+- 清理「已解除但没人改」的记录（stale red）
+- 补齐 4 项未验完的功能验证
+
+**P1**
+- D1 的 `impl` 升级为受控的**真可执行函数**（当前是 DSL 表达式）
+- D4 完整实现（需外置远端通道）
+- 审计外置 L2
+- C2 各级流程
+- restrict 第二批（两个时序问题需先探明）
+
+**P2**
+- 统一三份审计链的 schema
+- 消除「一物两名 / 一名两物」
+- 修 `_replay_phase_audit.mjs` 的崩溃零输出
+- 恒真判据全仓排查 + 检查器自检
+
+---
+
+## [0.0.1] — 2026-09-23 — 2026-09-29
+
+> **PoC 阶段。** 19 项功能中 15 项活验完整、4 项部分完成、**0 项未实现**。
+
+### 新增
+
+#### M0 · 立项（09-23）
+- 可行性分析
+
+#### M1 · Stage 5：Phase 状态机（09-24）
+- **新增插件 `dsh-fde-phase`** —— FDE 业务阶段概念 + 自建状态机
+- `fde_phase_advance` 工具（推阶段的**唯一**入口）+ `guard` 钉在入口
+- 15 个 Phase 的权威表 + `DENY_CHECKS` 门禁映射
+- `state.yaml` 状态机 + **单写者锁**（强夺条件：`超时 && 持有进程已死`）
+- D1 结论的**内存镜像**（事件驱动 + 重启后从审计尾部恢复）
+
+#### M2 · Stage 5 第一批~第三批（09-25 — 09-27）
+- **`ctx.tools.restrict` 工具面过滤**（受保护阶段隐藏 `pwsh` 等）
+- restrict 审计链补齐 `replaced` / `restored` / `untracked` 三态
+- trigger 沿调用链传递 + 吞错分级
+
+#### M3 · Stage 5.5：D2/D3 接线（09-26）
+- **D2** 审计链完整性校验（**含内容级 hash 重算**）
+- **D3** 规则可信度校验（可反驳性、`DraftReference`）
+
+#### M4 · Stage 5.6：D5 合规门禁（09-28）
+- `check-d5.js` —— Phase 6 的合规边界检查
+- D4 从 `deny` 降为 **`approval.ask`**
+
+#### M5 · 记忆系统 v2（09-28）
+- **新增插件 `dsh-fde-memory`**（第 4 个插件）
+- decisions / checklist / stakeholders / notes / maturity
+- **审计外置 L1**（`memory/audit/events.jsonl`）+ **凭据脱敏**
+  - 键名匹配 `/(token|secret|password|credential|api[_-]?key|jwt|bearer|signature)/i`
+  - 值样式匹配（bearer / sk- / JWT 三路）+ 深度上限
+
+#### M6 · C 系列与 E1（09-28）
+- **C1** 变更分级（L0/L1/L2，写入时自动判定）
+- **C3** 回滚预授权（审批时同步记录 preauth）
+- **E1** break-glass 逃生门（独立留痕 + **7 天补正期**）
+
+#### M7 · 交付归档（09-29）
+- **17 份交付文档**（5 大类）
+- 仓库结构标准化（README / LICENSE / CHANGELOG / CONTRIBUTING / .gitignore）
+
+---
+
+### 修复
+
+> **口径**：以下 **47 条**是 `_inbox/` 123 份交接文档中**被明确记录下来的**缺陷与错误。
+> **完整版见** → [问题与 Bug 台账](docs/02-development/issue-log.md)
+
+#### 🔴 A 级 · 真缺陷（12 条，摘录）
+
+| 出处 | 缺陷 |
+|---|---|
+| `0006` | `replaced` 会抹掉 `appliedSeq` |
+| `0010` | `audit.js` 的 `writable` 三元写反（`0o444 : 0o644`） |
+| `0012` | gate 链 2 处 GENESIS 接缝 ⇒ **D2 活体永不过** |
+| `0014` | **D2 判据② 只验 hash 格式、从不重算** ⇒ 内容可改仍判「完整」 |
+| `0018` | preset `ptc` 遮蔽 `mode:native` ⇒ **fail-closed 变 fail-dead**（模型零工具） |
+| `0022` | 三条路径（`phase.jsonl`/`state.yaml`/`.state.lock`）**全无守卫** |
+| `0055` | `_replay_phase_audit.mjs` 遇坏 JSON **崩溃 + 零输出** ⇒ **报警能力为零** |
+| `0066-A` | `industry:'未声明'` 不关闭 D5 ⇒ **Phase 6 推进必被拦死** |
+| `0066-B` | `_fde_d5_test.mjs` 是 **0 字节空文件** ⇒ 测试从未跑过，产物却写「PASS 9 / FAIL 0」 |
+| `0086` | `notes.js` 的 date 缺省用 **UTC 而非本机时区** |
+
+#### 🟠 B 级 · 判据 / 方法错（18 条，摘录）
+
+| 出处 | 错在哪 |
+|---|---|
+| 多次 | 重放报「3 处断链」——**按文件行序**重放 ⇒ 应按 `seq` 排序 |
+| 多次 | 「工具总数变多了」——总数**本来就不是判据** |
+| `0015` | 元错误：**「断言域 ≠ 验证域」** |
+| `0026` | **自己的仪器对坏样本说 OK** |
+| `0027` | **自己的 shell 命令骗了自己** |
+| `0030` | `with` 方向把视窗 **fail-closed 丢了**（假绿） |
+| `0050` | 🔴 **「逐名 diff」判据被实测证伪** ⇒ 改用「链事件 + 时间紧邻配对」 |
+| `0052` | 归因是我补的 + 仪器命令下错（第 28 次） |
+
+#### 🟡 C 级 · 记账 / 表述（17 条，摘录）
+
+| 出处 | 问题 |
+|---|---|
+| `0023` | 认 `cfg.auditPath` 写错（**第 7 次同族失手**） |
+| `0059` | README 挂着**已解除但没人改的红**（stale red） |
+| `0062` | **README 源↔副本漂移** |
+
+---
+
+### 变更
+
+> **口径**：以下 **16 条**。**完整版见** → [需求变更记录台账](docs/02-development/change-requests.md)
+
+| # | 变更 |
+|---|---|
+| CR-01 | 🔴 **多 AI 协作 → 单 AI 独立**（09-28，用户拍板） |
+| CR-02 | D4 从 `deny` 降为 `ask` |
+| CR-03 | D4 本轮不做（需外置远端） |
+| CR-04 | D1 的 `impl` 用 **DSL 表达式**而非真函数（⚠️ **PoC 降级**） |
+| CR-05 | restrict 工具面过滤推迟到第二批 |
+| CR-06 | 记忆系统 v2 **新建第 4 插件** |
+| CR-07 | E1 break-glass 放 `dsh-fde-phase`，不新建插件 |
+| CR-08 | 审计外置**只做 L1，L2 留接口** |
+| CR-09 | confidence 提前到 A2 批 |
+| CR-10 | C2 留后 |
+| CR-11 | `from` 字段改指「最后一条 applied」，不链式 |
+| CR-12 | 归档策略选方案 A |
+| CR-13 | P0-4 选方案 X（YAML 锚点消重） |
+| CR-14 | seed 做法变更（不需推进/重启/写 reason） |
+| CR-15 | 🔴 判据变更：逐名 diff 降为辅助 |
+| CR-16 | spec 假设的 `approval.ask` 签名是错的 |
+
+---
+
+### 已知问题（**未修，已记录**）
+
+| 项 | 说明 |
+|---|---|
+| 三份审计链 schema 不统一 | gate 用 `type`/`tool`+`decision`/`event`；memory 用 **`kind`** |
+| 一物两名 | 目录 `dsh-fde-ontology-gate` vs 注册名 `fde-ontology-gate` |
+| 一名两物 | 「**D1**」既指 spec §3 护栏绑定，又指 §8 审计外置四层 |
+| 4 项未验完 | 见 [功能对照表 §4](docs/01-overview/feature-matrix.md) |
+| 无版本控制 | 见 [版本管理记录](docs/02-development/releases.md) |
+| 无成本台账 | 见 [成本与资源统计](docs/04-retrospective/cost-resources.md) |
+
+---
+
+## 链接
+
+- [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)
+- [语义化版本](https://semver.org/lang/zh-CN/)

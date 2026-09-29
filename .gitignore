@@ -1,0 +1,67 @@
+# ─────────────────────────────────────────────────────────────
+#  ⚠️ 本项目的 .gitignore 有一个【反常规】的地方，改之前先读完
+# ─────────────────────────────────────────────────────────────
+
+# 🔴 node_modules/【不能整目录忽略】
+#
+# 本项目四个插件都是【零运行时依赖】（package.json 的 dependencies 全为空）。
+# 仓库里的 node_modules/ 只有 4 个文件，是 test 桩（@deepseek-ai/dsh-tools 与 dsh-llm），
+# 被【6 套回归】当作共享夹具使用（见 dsh-fde-*/README.md 与开发手册 §8）。
+#
+#   如果写成 `node_modules/` 整目录忽略 ⇒ 这 4 个桩不会进仓库
+#   ⇒ 克隆下来的仓库有 6 套回归会因【找不到夹具】而失败。
+#
+# 所以这里【精确忽略】node_modules 的内容，只放行 @deepseek-ai/ 下这两个包。
+node_modules/*
+!node_modules/@deepseek-ai/
+node_modules/@deepseek-ai/*
+!node_modules/@deepseek-ai/dsh-tools/
+!node_modules/@deepseek-ai/dsh-llm/
+
+# ── 测试与探针的输出产物 ──────────────────────────────────────
+# 这些是【每次跑都会重新生成】的，不进版本控制。
+# ⚠️ 脚本本身（_*_test.mjs / _*_live*.mjs）【必须进仓库】——它们才是资产。
+_*_out.txt
+_*.pid
+_*_drive_out.txt
+evidence/
+
+# ── 运行时数据（绝不进仓库）───────────────────────────────────
+# 🔴 这三处含真实业务数据、审计记录、凭据。详见 docs/05-ai-development/data-licensing.md
+fde-state/
+fde-audit/
+ontologyRoot/
+memory/
+*.lock
+.state.lock
+
+# ── 快照与归档（历史价值已被 git 取代）────────────────────────
+# 本项目在无 git 时期用手工快照代替版本控制，共 35 项。
+# 纳入 git 后它们的使命结束。详见 docs/02-development/releases.md
+_snapshots/
+_archive/
+_baseline/
+_mut/
+
+# ── 交接文档 ──────────────────────────────────────────────────
+# 123 份交接文档是【多 AI 协作期】的产物，其内容已被 docs/02-development/ 提炼。
+# 数据量约 1.31 MB。如需保留原档，删掉下面这行即可。
+_inbox/
+
+# ── Node / 编辑器 / 系统 ──────────────────────────────────────
+node_modules/.cache/
+npm-debug.log*
+yarn-error.log*
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+*~
+*.swp
+
+# ── 备份与临时 ────────────────────────────────────────────────
+*.bak
+*.tmp
+*.orig
+backup-*/

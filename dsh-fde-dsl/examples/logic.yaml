@@ -1,0 +1,22 @@
+# 示例规则表 —— 3 条规则，可派生 ≥15 条反例（v3 Stage 4 完成判据）
+#
+# 条件必须写成**行内合法 JSON**（本项目的 YAML 子集要求，见 lib/yamlsubset.js）。
+# effect 只能是 deny / warn / allow；reason 必填。
+
+rules:
+  - id: R001
+    effect: deny
+    reason: 剂量超过单次上限
+    condition: {">": [{"var": "treatment.dose_mg"}, 100]}
+
+  - id: R002
+    effect: warn
+    reason: 面部项目需二次确认
+    condition: {"==": [{"var": "treatment.site"}, "face"]}
+
+  # 多叶子规则：会额外跑候选值笛卡尔积（组合用例），
+  # 否则"一次只动一个叶子"可能凑不出触发输入 → 假失败 RuleNeverFires
+  - id: R003
+    effect: deny
+    reason: 首访且剂量非零需复核
+    condition: {"and": [{"==": [{"var": "treatment.is_first_visit"}, true]}, {"!=": [{"var": "treatment.dose_mg"}, 0]}]}

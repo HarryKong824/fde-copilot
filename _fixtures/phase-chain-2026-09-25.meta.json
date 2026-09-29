@@ -1,0 +1,11 @@
+{
+  "source": "E:/DSH-desktop/DeepSeek Harness/data/dsh-home/fde-audit/phase.jsonl",
+  "capturedAt": "2026-09-26T00:56:10.873126Z",
+  "capturedBy": "WorkBuddy (0003 往返)",
+  "lines": 36,
+  "bytes": 15800,
+  "sha256": "29be539b199d665a1a110f46424e67077753411bb0cdac49e074abb3479355d0",
+  "firstSeq": 1,
+  "lastSeq": 36,
+  "note": "活链 phase.jsonl 的只读快照。append-only 会继续变长，用例一律以本快照为基线，禁止直接读活链。"
+}

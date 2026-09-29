@@ -1,0 +1,28 @@
+# 示例 ontology —— 可直接复制到 ontologyRoot 做首次活验
+#
+# ⚠️ 每个字段都不是装饰，它们直接决定派生出多少条反例：
+#    · step / min / max  → 数值属性的边界候选值
+#    · enum              → 字符串属性的成员 + 非成员候选值
+#    · maturity          → deny 规则能不能引用它（draft 会被 D3 判失败）
+#
+# 没写 maturity 的属性一律当 draft（fail-closed）：这里 note 就是故意留的示例。
+
+objects:
+  - name: treatment
+    attributes:
+      - name: dose_mg
+        type: number
+        step: 1
+        min: 0
+        max: 200
+        maturity: verified
+      - name: site
+        type: string
+        enum: ["face", "body", "neck", "hands"]
+        maturity: verified
+      - name: is_first_visit
+        type: boolean
+        maturity: verified
+      - name: note
+        type: string
+        # 故意不写 maturity → 默认 draft，被 deny 规则引用即失败（见 README 反向验证）

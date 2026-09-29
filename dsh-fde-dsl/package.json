@@ -1,0 +1,23 @@
+{
+  "name": "dsh-fde-dsl",
+  "version": "0.0.1",
+  "private": true,
+  "description": "FDE Copilot v3 — Ontology 受限 DSL 解析器 + D3 边界值反例验证器（Stage 3+4）",
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib",
+    "precheck.mjs"
+  ],
+  "scripts": {
+    "precheck": "node precheck.mjs"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/dsh-tools": "0.1.2-rc.1",
+    "@deepseek-ai/schemastery": "3.18.2"
+  }
+}

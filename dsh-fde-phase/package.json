@@ -1,0 +1,22 @@
+{
+  "name": "dsh-fde-phase",
+  "version": "0.0.1",
+  "private": true,
+  "description": "FDE Copilot v3 — Phase 状态机 + fde_phase_advance（自建业务阶段机 + guard 钉入口）",
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib"
+  ],
+  "scripts": {
+    "precheck": "node precheck.mjs"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/dsh-tools": "0.1.2-rc.1",
+    "@deepseek-ai/schemastery": "3.18.2"
+  }
+}

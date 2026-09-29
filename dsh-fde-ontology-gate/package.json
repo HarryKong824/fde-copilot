@@ -1,0 +1,19 @@
+{
+  "name": "dsh-fde-ontology-gate",
+  "version": "0.0.1",
+  "private": true,
+  "description": "FDE Copilot ontology 门禁插件（PoC 骨架）：guard 钉专用工具入口 + 自定义路径兜底 + 审计",
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib"
+  ],
+  "peerDependencies": {
+    "@deepseek-ai/dsh-tools": "0.1.2-rc.1",
+    "@deepseek-ai/schemastery": "3.18.2"
+  }
+}

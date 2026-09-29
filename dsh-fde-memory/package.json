@@ -1,0 +1,22 @@
+{
+  "name": "dsh-fde-memory",
+  "version": "0.0.1",
+  "private": true,
+  "description": "FDE Copilot v3 — 记忆系统 v2（按域拆分 + SCHEMA_VERSION 链式迁移 + notes 溯源过期 + 置信度规则化推导）",
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib"
+  ],
+  "scripts": {
+    "precheck": "node precheck.mjs"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/dsh-tools": "0.1.2-rc.1",
+    "@deepseek-ai/schemastery": "3.18.2"
+  }
+}
