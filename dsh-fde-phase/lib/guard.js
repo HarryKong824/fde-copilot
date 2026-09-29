@@ -8,13 +8,14 @@
  * 判定与留痕共用同一份规则，避免"shadow 说会拦、enforce 却不拦"这类规则漂移。
  *
  * 🔴 guard 是同步的，所以：
- *   - 读 state 用 `readStateSync`（同步 fs）
+ *   - 读 state 用 `readStateGradedSync`（同步 fs，**分档**：只有"文件不在"才回落初始状态；
+ *     文件坏了 ⇒ 拒绝。详见 state.js 顶端那张"三个同步读别混用"的表）
  *   - D1 结论比对用 `mirror.verify`（同步重算 actions.yaml 的 sha256）
  *   - 绝不在这里写审计（写审计在 pre-execute 监听器里做）
  */
 
 import { join } from 'node:path'
-import { readStateSync, inObservation } from './state.js'
+import { readStateGradedSync, inObservation } from './state.js'
 import { nextPhase, DENY_CHECKS, IMPLEMENTED_CHECKS } from './phases.js'
 import { TOOL_BY_CHECK } from './mirror.js'
 import { complianceFingerprintSync, isRegulatedIndustry } from './check-d5.js'
@@ -128,8 +129,28 @@ export function evaluate(exec, cfg, mirror, bg) {
   const to = typeof args.to === 'string' ? args.to : ''
 
   // 同步读 state.yaml（guard 不能 await；apply 期已把 projectRoot 解析好，不猜路径）。
+  //
+  // 🔴 必须用**分档**读：把"文件坏了（不可知）"和"文件不在（首次运行）"混为一谈，
+  //    就等于在"最该保守的时刻"（读失败）把保护放到最松 —— 读不到 current_phase 时
+  //    若按初始阶段 0.1 继续判，真实阶段的门禁会被**整体跳过**，回滚观察期的冻结也会
+  //    因 `rollback_at` 为空而被静默解除，而且这次"推进"还会把坏文件重写成看起来正常的进度。
   const statePath = join(cfg.projectRoot, 'memory', 'state.yaml')
-  const state = readStateSync(statePath)
+  const grade = readStateGradedSync(statePath)
+  if (!grade.present && grade.reason !== 'enoent') {
+    return {
+      deny:
+        `无法判定当前阶段：状态文件不可信（${grade.reason}）—— ${statePath}` +
+        (grade.error ? `：${grade.error}` : '') +
+        '。\n按 fail-closed 规则**拒绝本次推进**：读不出来时按"初始阶段"继续判，' +
+        '会整体跳过真实阶段的门禁（并可能把这份坏文件就地重写成看起来正常的进度）。\n' +
+        '恢复动作：查看并修复该文件；若确认要从头开始，删除它 —— 删除后的语义是"首次运行"，' +
+        '不是"不可知"。',
+      checks: [],
+      skipped: []
+    }
+  }
+  // `enoent` 档带上初始状态 ⇒ 首次运行时这里就是 `{...DEFAULT_STATE}`，行为与修前一致。
+  const state = grade.state
   const current = String(state.current_phase ?? '0.1')
 
   // ⓪ C3（spec §10.4）：回滚观察期冻结 —— 最高优先级，先于推进规则与门禁判定。

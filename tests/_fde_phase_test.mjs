@@ -38,7 +38,8 @@ import {
   DEFAULT_STATE,
   serializeState,
   writeState,
-  acquireLock
+  acquireLock,
+  readStateGradedSync
 } from '../dsh-fde-phase/lib/state.js'
 import { D1Mirror, sha256Text } from '../dsh-fde-phase/lib/mirror.js'
 import { evaluate } from '../dsh-fde-phase/lib/guard.js'
@@ -592,15 +593,13 @@ t('guard shadow 模式同样判定（仅不拦）', () => {
   assert(r.deny && r.deny.includes('D1'), 'shadow 仍应判定 D1 未过')
 })
 
-// ---------- 🔴 已知缺口绊线：state.yaml 损坏 ⇒ guard 退到「初始状态」，门禁被整体跳过 ----------
-// 这条**故意断言「当前是坏的」**。它不是"把 bug 写成测试"，是个**绊线**：
-//   ① 谁真把它修好了 ⇒ 本条立刻变红，逼着去把 SECURITY.md §三 与 roadmap 一起改掉（否则又是一条 stale red）；
-//   ② 谁把 fail-closed 改得更差 ⇒ 下面两条对照先红。
-// 根因不在 guard，在 `dsh-fde-phase/lib/state.js:111-114` —— `readStateSync` 把 **ENOENT 与
-// 「文件在、但内容坏了 / 读不了」合进同一个 catch**，两支返回同一个 `DEFAULT_STATE`
-// （`current_phase:'0.1'`、`rollback_at:''`，`:29-38`）⇒ 调用方分不出「真读到」与「什么都没读到」。
-// 详见 SECURITY.md §三 同名条目。
-lines.push('[已知缺口绊线：state.yaml 损坏时的 fail-open]')
+// ---------- 状态文件不可信 ⇒ 门禁 fail-closed（2026-09-29 修掉的那个 fail-open）----------
+// 修前：`readStateSync` 把「文件不在」与「文件在但读不出来」**合成同一个 DEFAULT_STATE**
+// （`current_phase:'0.1'`、`rollback_at:''`）⇒ 坏文件下真实阶段的门禁被整体跳过、
+// 回滚观察期冻结被静默解除、且坏文件会被就地重写成"看起来正常"的进度。
+// 修后：guard 走 `readStateGradedSync`（分档），**只有 `enoent` 档**回落初始状态。
+// 判据是**双向**的：坏 ⇒ 必须拒（下面 5 条）＋ 首次运行 ⇒ 必须仍放行（末条，防"修过头"）。
+lines.push('[状态文件不可信 ⇒ fail-closed（双向判据）]')
 function mkRawProject(rawText) {
   const root = mkdtempSync(join(tmpdir(), 'fde-phase-bad-'))
   const mem = join(root, 'memory')
@@ -609,6 +608,8 @@ function mkRawProject(rawText) {
   return root
 }
 const okCfg = (root) => ({ projectRoot: root, ontologyRoot: mkOnto('x'), mode: 'enforce', gateAuditPath: 'g' })
+const askTo02 = (root) =>
+  evaluate({ name: 'fde_phase_advance', arguments: { to: '0.2' } }, okCfg(root), new D1Mirror())
 
 t('对照A：state.yaml 完好且刚回滚过（阶段6）⇒ 请求 0.2 因「观察期冻结」被拒', () => {
   const root = mkRawProject(serializeState({
@@ -616,21 +617,63 @@ t('对照A：state.yaml 完好且刚回滚过（阶段6）⇒ 请求 0.2 因「�
     current_phase: '6',
     rollback_at: new Date(Date.now() - 60_000).toISOString() // 1 分钟前回滚 ⇒ 24h 窗口内
   }))
-  const r = evaluate({ name: 'fde_phase_advance', arguments: { to: '0.2' } }, okCfg(root), new D1Mirror())
+  const r = askTo02(root)
   assert(r.deny && r.deny.includes('观察期'), `对照应因观察期被拒，实际 ${r.deny}`)
 })
 t('对照B：state.yaml 完好、不在观察期（阶段6）⇒ 请求 0.2 因「跳跃」被拒', () => {
-  const root = mkRawProject(serializeState({ ...DEFAULT_STATE, current_phase: '6' }))
-  const r = evaluate({ name: 'fde_phase_advance', arguments: { to: '0.2' } }, okCfg(root), new D1Mirror())
+  const r = askTo02(mkRawProject(serializeState({ ...DEFAULT_STATE, current_phase: '6' })))
   assert(r.deny && r.deny.includes('跳跃'), `对照应因跳跃被拒，实际 ${r.deny}`)
 })
-t('🔴 已知缺口：state.yaml 损坏 ⇒ 上面两道拦阻**同时消失**，请求 0.2 被放行', () => {
-  // 二进制垃圾：一行都匹配不上 ⇒ parseState 原样返回 DEFAULT_STATE。
-  const root = mkRawProject('\u0000\u0001binary garbage, not yaml at all')
-  const r = evaluate({ name: 'fde_phase_advance', arguments: { to: '0.2' } }, okCfg(root), new D1Mirror())
-  assertEq(r.deny, undefined,
-    '若这里开始返回 deny ⇒ **缺口已被修好**：请同步更新 SECURITY.md §三 与 roadmap 后，把本条改成新判据')
-  assertEq(r.checks, [], '坏文件下 checks 为空 —— 正是"门禁被整体跳过"的直接证据')
+
+// 下面 5 条 = "文件在、但不可信"的各种形态。每一条都必须**拒绝**，
+// 而且文案要说明"不可信"（而不是伪装成"跳跃被拒"这类正常拒绝）。
+const UNTRUSTED = [
+  ['二进制垃圾（一个键都提取不出）', '\u0000\u0001binary garbage, not yaml at all', 'bad'],
+  ['空文件（截断 / 没写完）', '   \n', 'empty'],
+  ['有别的键、但缺 current_phase', 'schema_version: 1\nphase_status: done\n', 'bad'],
+  ['current_phase 是空串', 'schema_version: 1\ncurrent_phase: ""\n', 'bad'],
+  ['schema_version 不是本插件认的值', 'schema_version: 99\ncurrent_phase: "6"\n', 'schema']
+]
+for (const [name, raw, reason] of UNTRUSTED) {
+  t(`🔒 不可信档「${name}」⇒ 拒绝推进（reason=${reason}）`, () => {
+    const r = askTo02(mkRawProject(raw))
+    assert(r.deny, `必须拒绝，实际放行了（deny=${r.deny}）`)
+    assert(r.deny.includes('不可信') && r.deny.includes(reason),
+      `文案应说明不可信与档位 ${reason}，实际：${r.deny}`)
+    assertEq(r.checks, [], '拒绝发生在门禁判定之前 ⇒ checks 应为空')
+  })
+}
+
+t('✅ 反向对照：文件**不存在**（首次运行）⇒ 仍按初始阶段放行，不许被误伤', () => {
+  const root = mkdtempSync(join(tmpdir(), 'fde-phase-new-'))
+  mkdirSync(join(root, 'memory'), { recursive: true }) // 目录在、state.yaml 还没建
+  const r = askTo02(root)
+  assertEq(r.deny, undefined, `首次运行必须仍可推进到 0.2，实际 ${r.deny}`)
+})
+
+// 直接测分档函数本身：四档必须**互不相同**（这是"缺席能分辨"的最小证据）。
+lines.push('[readStateGradedSync 分档]')
+t('分档：present / enoent / empty / bad / schema 五种取值互不混淆', () => {
+  const good = mkRawProject(serializeState({ ...DEFAULT_STATE, current_phase: '6' }))
+  const absent = join(mkdtempSync(join(tmpdir(), 'fde-phase-none-')), 'memory', 'state.yaml')
+  const seen = {
+    present: readStateGradedSync(join(good, 'memory', 'state.yaml')),
+    enoent: readStateGradedSync(absent),
+    empty: readStateGradedSync(join(mkRawProject(''), 'memory', 'state.yaml')),
+    bad: readStateGradedSync(join(mkRawProject('\u0000junk'), 'memory', 'state.yaml')),
+    schema: readStateGradedSync(join(mkRawProject('schema_version: 2\ncurrent_phase: "6"\n'), 'memory', 'state.yaml'))
+  }
+  assertEq(seen.present.present, true, 'present 档')
+  assertEq(seen.present.state.current_phase, '6', 'present 档要给出真实阶段')
+  for (const k of ['enoent', 'empty', 'bad', 'schema']) {
+    assertEq(seen[k].present, false, `${k} 档必须 present:false`)
+    assertEq(seen[k].reason, k, `${k} 档 reason`)
+  }
+  // 只有 enoent 档带 state（首次运行的初始状态）；其余三档**不许**带 —— 带了就等于给了回落的口子
+  assert(seen.enoent.state && seen.enoent.state.current_phase === '0.1', 'enoent 档应带初始状态')
+  for (const k of ['empty', 'bad', 'schema']) {
+    assertEq(seen[k].state, undefined, `${k} 档不许带 state（否则调用方可能拿它回落）`)
+  }
 })
 
 // ================================================================ 收尾

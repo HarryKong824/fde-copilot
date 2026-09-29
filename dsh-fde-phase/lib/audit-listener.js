@@ -17,7 +17,7 @@
 
 import { join } from 'node:path'
 import { evaluate } from './guard.js'
-import { readStateSync } from './state.js'
+import { readStateGradedSync } from './state.js'
 import { BG_CHAIN_TYPES } from './bg-mirror.js'
 import { BG_RELATIVE_PATH, readBreakGlassSync, writeBreakGlassAtomic } from './break-glass.js'
 
@@ -41,7 +41,14 @@ export function installAuditListener(ctx, cfg, audit, mirror, bg) {
     const args = /** @type {Record<string, unknown>} */ (exec.arguments ?? {})
     const to = typeof args.to === 'string' ? args.to : ''
     const statePath = join(cfg.projectRoot, 'memory', 'state.yaml')
-    const current = String(readStateSync(statePath).current_phase ?? '0.1')
+    // 审计里的 `from` 也必须**说真话**：状态不可信时写 `'(不可知)'`，不能借 `readStateSync`
+    // 那套回落把它记成 `0.1` —— 那会让审计链自己伪造一个"当时在出生阶段"的事实。
+    const grade = readStateGradedSync(statePath)
+    const current = grade.present
+      ? String(grade.state.current_phase ?? '0.1')
+      : grade.reason === 'enoent'
+        ? '0.1' // 首次运行：文件还没建，语义上确实是初始阶段
+        : '(不可知)'
 
     // 🔴 诚实缺口清单：未实现的 deny 项必须"明确不拦 + 写审计说明"。
     if (skipped && skipped.length > 0) {

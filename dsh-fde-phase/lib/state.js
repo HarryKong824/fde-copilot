@@ -17,8 +17,19 @@
  *   - **写**：写前重读（锁内）→ 改 → 写 `.tmp` → `rename()` 覆盖（同卷 rename 原子）→ 释放锁。
  *
  * ⚠️ guard 是同步的，不能在里面写 state；只有 `fde_phase_advance` 的 execute（async）才写。
- * 但 guard **读** state 是同步的（`readStateSync`，用于取 current_phase 做门禁判定），
+ * 但 guard **读** state 是同步的（`readStateGradedSync`，用于取 current_phase 做门禁判定），
  * 所以这里同时提供同步读与异步写两套接口。
+ *
+ * #### 三个同步读函数，别混用（2026-09-29 收敛，此前 guard 用错了其中一个）
+ *
+ * | 函数 | 文件不在 | 文件在但读不出/无意义 | 用途 |
+ * |---|---|---|---|
+ * | `readStateSync` | `DEFAULT_STATE` | **`DEFAULT_STATE`**（错→已不再用于门禁） | 只给"文件不在就是初始状态"且**不据此撤保护**的地方 |
+ * | `readStateStrictSync` | `null` | `null` | fail-safe 调用方（restrict：不可知 ⇒ 既不挂也不摘） |
+ * | `readStateGradedSync` | `enoent` + 初始状态 | **`present:false, reason:'bad'/'empty'/'schema'`** | **门禁判定**：缺席必须能与"不可知"分开 |
+ *
+ * ⚠️ `readStateSync` 保留但**不得再用于任何门禁/保护判定** —— 它的两个分支返回同一个值
+ * （`tools/_restrict_failopen_probe.mjs` 的 D 段已在实测里证明"ENOENT 判断是死代码"）。
  */
 
 import { readFile, writeFile, rename, rm, open, mkdir } from 'node:fs/promises'
@@ -154,9 +165,12 @@ export function parseStateStrict(text) {
  *
  * #### 适用范围
  *
- * 只给"阶段不可知 ⇒ 不变更任何状态"这类 **fail-safe 调用方**用。
- * 凡是需要"文件不在就用初始状态"语义的地方（guard 的门禁判定依赖它），继续用 `readStateSync` ——
- * 本函数**不是** `readStateSync` 的替代品，两者语义不同、**不可互换**。
+ * 只给"阶段不可知 ⇒ **不变更任何状态**"这类 **fail-safe 调用方**用（restrict 治理器）。
+ * 它把"文件不在"和"文件坏了"**合并成同一个 `null`** —— 这对 fail-safe 够用（两种都不变更），
+ * 但**不足以做门禁判定**：门禁必须区分"首次运行（文件还没建 ⇒ 初始阶段 0.1 是对的）"
+ * 与"文件坏了（不可知 ⇒ 必须拒绝）"。那个区分由 `readStateGradedSync` 提供。
+ *
+ * ⚠️ 本函数**不是** `readStateSync` 的替代品，两者语义不同、**不可互换**。
  *
  * @param {string} statePath
  * @returns {object|null} 读到内容 ⇒ 稀疏状态 map；读不到 / 读空 ⇒ `null`
@@ -169,6 +183,71 @@ export function readStateStrictSync(statePath) {
   } catch {
     return null
   }
+}
+
+/**
+ * 分档同步读：**给门禁判定用**。缺席必须能与"不可知"分开，否则读失败会变成放行。
+ *
+ * 取值口径与 `dsh-fde-memory/lib/outbox.js` 的 `readStateSync` **同一套**
+ * （`enoent` / `empty` / `bad` / `schema`）—— 那是本项目已有的正确实现，
+ * 它的注释里甚至点名了"**尤其 phase 的 guard** 不许把 `present:false` 当成'没有中断'"。
+ * 2026-09-29 之前 phase 的 guard 恰恰违反了这一条，本函数就是来补上的。
+ *
+ * #### 每一档的语义（调用方必须逐档处理，不许一律回落）
+ *
+ *   - `enoent`：**文件不在 ⇒ 首次运行**。这是**唯一**允许"缺席但继续"的档：
+ *     插件尚未创建状态文件时，语义明确就是初始阶段，不是"不可知"。返回对象里
+ *     **带上 `state = {...DEFAULT_STATE}`**，好让调用方不必再去 import 那个常量。
+ *   - `empty`：文件在、但是空的（截断 / 没写完）。
+ *   - `bad`：文件在、但**一个键都提取不出**（二进制垃圾 / 编码坏 / 缺 `current_phase` /
+ *     `current_phase` 是空串）。
+ *   - `schema`：`schema_version` 不是本插件认的值。
+ *
+ * ⚠️ **后三档都表示"这份状态不可信"，不是"没有状态"** —— 门禁必须 fail-closed。
+ * 把它们读成 `0.1` 的后果（实测过）：①真实阶段的门禁被**整体跳过**；
+ * ②回滚后 24h 观察期的冻结被**静默解除**（`rollback_at` 读到空串 ⇒ `inObservation()` 返回 false）；
+ * ③这次"推进"还会把坏文件**就地重写成看起来正常的进度**，事故痕迹随之消失。
+ *
+ * 🔴 **为什么不能只靠 `catch`**：截断/编码坏这类最常见的意外里，`readFileSync` 是**成功**的，
+ * `parseState` 又**从不抛异常**（逐行 `continue`）⇒ **`catch` 根本进不去**。
+ * 所以判断必须落在"**文件里到底有没有我们关心的键**"上（`parseStateStrict`），
+ * 不能落在"有没有抛错"上。
+ *
+ * @param {string} statePath
+ * @returns {{present: true, reason: 'present', state: object}
+ *        | {present: false, reason: 'enoent', state: object}
+ *        | {present: false, reason: 'empty'|'bad'|'schema', error?: string}}
+ */
+export function readStateGradedSync(statePath) {
+  let text
+  try {
+    text = readFileSync(statePath, 'utf8')
+  } catch (e) {
+    if (e && e.code === 'ENOENT') return { present: false, reason: 'enoent', state: { ...DEFAULT_STATE } }
+    // 权限 / 路径是目录 / 编码错 —— 真读不出来，**不给**初始状态
+    return { present: false, reason: 'bad', error: `读取失败：${String(e?.message ?? e)}` }
+  }
+  if (text.trim().length === 0) return { present: false, reason: 'empty', error: '文件是空的' }
+  const keys = parseStateStrict(text)
+  if (Object.keys(keys).length === 0) {
+    return { present: false, reason: 'bad', error: '一个键都提取不出（内容不可解析）' }
+  }
+  if (keys.schema_version !== 1) {
+    return {
+      present: false,
+      reason: 'schema',
+      error: `schema_version=${JSON.stringify(keys.schema_version)}，本插件只认 1`
+    }
+  }
+  const cp = keys.current_phase
+  if (cp === undefined || cp === null) {
+    return { present: false, reason: 'bad', error: '文件里没有 current_phase' }
+  }
+  // 空串 / 全空白都不是阶段 id —— 当成 0.1 会比不读更糟（那是个合法且非受保护的阶段值）。
+  if (String(cp).trim() === '') {
+    return { present: false, reason: 'bad', error: 'current_phase 是空串或全空白' }
+  }
+  return { present: true, reason: 'present', state: parseState(text) }
 }
 
 /** 异步读。文件不存在 → DEFAULT_STATE。 */
