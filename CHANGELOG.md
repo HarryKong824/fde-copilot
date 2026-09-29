@@ -50,6 +50,57 @@
 > 那些出现在**「交付后补做」小节**里的计数，记录的是**当时**的事实（当时确实是 40/115），
 > 因此**不回改**；但读者若拿它们当当前值会数错，故在此明确指认。
 
+### 清理「已解除但没人改」的记录（stale red）—— P0-3 完成（2026-09-29 晚）
+
+**背景**：本仓自己把这条列为 P0 —— 「修复问题」和「更新记录」是**两个动作**，只做前一个，
+文档就会**持续往"更严重"的方向撒谎**：读者会以为问题还在，于是**不去找那份已经存在的实现**。
+
+**做法**：先全仓 grep「声称有问题」的措辞（`未实现|未修|待办|已知缺口|不可用|会崩|尚未|未覆盖|未完成|未验|没实现` 等）
+⇒ 命中 **270 行**；再**逐条回源码核对**今天是否还成立。**不用第二次 grep 当判据。**
+
+#### 判定为「已过时」并订正的位置（11 处）
+
+| # | 位置 | 原文说 | 实际 |
+|---|---|---|---|
+| 1 | `SECURITY.md` 限制表 #4 | 审计外置**只做 L1**，L2/L3/L4「PoC 未实现」 | **已接线**：`dsh-fde-memory/lib/audit.js` 的 `#outbox` 重放 + `#degraded` 保序闸、`lib/index.js:195` 装配 `installTelemetrySink`、`dsh-fde-phase/lib/guard.js:22` 调 `crossCheckRemoteSync` |
+| 2 | `SECURITY.md` 已知未修表 | `_replay_phase_audit.mjs` **崩溃零输出** | **已修**（`:45-47`/`:86`/`:99` try/catch、`:135` exitCode） |
+| 3 | `SECURITY.md` 已知未修表 | **无版本控制** | **已纳入 git** |
+| 4 | `docs/04-retrospective/roadmap.md` P0-1 | 工作区**不是 git 仓库** | **已纳入 git**（并注明"当时是对的、后来做完没回来改"正是 stale red） |
+| 5 | 同上 P0-2 | **完全没有** Token / 费用记录 | **拆成两半**：Token ✅ 已实测（566,556,196）／费用 ❌ 仍缺 |
+| 6 | 同上 P1-3 | 审计外置 L2「**只留了接口**，没实现」 | `lib/outbox.js` 整个模块已落盘（`writeOutboxSync:103`/`listOutboxSync:122`） |
+| 7 | 同上 P1-4 | C2「**留后**」 | `dsh-fde-phase/lib/change-flow.js:59` 的 `REQUIRED_CHECKS` 按 L0/L1/L2 分列；`tests/_fde_c2_test.mjs` 在跑 |
+| 8 | 同上 P3-2 | 审计外置 L3/L4「**PoC 全未做**」 | `lib/telemetry-sink.js:97,137` + `dsh-fde-phase/lib/remote-state.js` 已在位（**端到端仍未验**） |
+| 9 | 同上 P3-4 | **SCHEMA 迁移未做** | **骨架已在**（`lib/schema-version.js:43` `migrate()` BFS 链式 + 无路径 fail-closed）；⚠️ 但 `CHAIN` **是空的** ⇒ **框架在、可跑的迁移没有** |
+| 10 | `docs/04-retrospective/cost-resources.md` 头部 | Token 消耗量 / 模型版本「❌ 无记录」 | **与同一份文件的 §2.1 自相矛盾**（那边早已填上实测 B 表）⇒ 按实测订正 |
+| 11 | `dsh-fde-dsl/README.md` Stage 6 / `dsh-fde-phase/README.md` | 记忆系统 v3「未做」／gate `audit.js` 同一缺陷「**未改，待单独立项**」 | 前者五项均已实现；后者**已于 2026-09-26 移植**（`gate/lib/audit.js:55,170-189`，注释自述「移植自 phase 补丁 3」） |
+
+另把两处**事故案例**（`docs/02-development/issue-log.md` #9、`docs/05-ai-development/ai-code-risks.md` 的 `0055`）
+加了「✅ 已修复（2026-09-29）」标注 —— **教训保留、状态说清**，不删案例。
+
+#### 顺带订正的两处**计数**错误
+
+- `docs/01-overview/architecture.md` §5.1 标题写「工具接口（**19** 个）」，**与它自己的表格矛盾**（表内实列 **20** 行）。
+  三个独立口径对拍：`grep -rho 'tools\.register(' dsh-fde-*/lib/ | wc -l` = 20、按插件分列 5+2+6+7 = 20、逐行数 20。
+- `docs/05-ai-development/ai-tools.md`「`_*_live*.mjs`（**19** 个）」→ 实测 **16**（`tools/` 14 + `tests/` 2）。
+
+#### ⚠️ 本次普查中，「判过时」这个动作自己出错两次（都已拦下）
+
+1. 把 `schema-version.js` 的 `migrate()` 当成「SCHEMA 迁移已做」—— 实际 `CHAIN = {}`，
+   代码注释写明「本单只有 v1，链是空的」。⇒ 改成「**框架在、可跑的迁移没有**」。
+2. 拿**今天的仓库状态**去判一条**历史记录**（`CHANGELOG` 里「39 个在 `tools/`、1 个在 `tests/`」）——
+   那句写于删除 4 个脚本**之前**，当时**是对的**。⇒ 未改，改由上方「清理 WorkBuddy 遗留脚本」的改读注覆盖。
+
+> **这条是本次最大的收获**：**stale red 的修法本身就是个"断言"**，而它与它要修的那类错误**同源** ——
+> 都要问「我这个判断的**时间基准**和**范围**是什么」。只核"代码在不在"会漏掉"接线没接线"，
+> 只核"今天对不对"会误伤"当时说的事实"。
+
+#### 判定为「**仍成立**」而**未**改动的（保留为真实风险）
+
+三份审计链 schema 不统一（memory 用 `kind`）· 4 项功能未在真环境验完 · `guard` 侧 `state.yaml` 不可解析时 fail-open ·
+shell 路径 token 提取有损（`gate/lib/guard.js:59`）· `run_code` 程序内直写 `node:fs` 抓不到（`:126`）·
+`change-log` 的 `appendFileSync` 无 fsync · `audit.js` 的 L1 内存 `#outbox` 进程退出即丢 ·
+D4 未完整实现 · D1 的 `impl` 是 DSL 表达式（主动降级）· restrict 第二批两个时序问题。
+
 ### 计划中（详见 [后续迭代规划](docs/04-retrospective/roadmap.md)）
 
 **P0**
@@ -61,8 +112,8 @@
 **P1**
 - D1 的 `impl` 升级为受控的**真可执行函数**（当前是 DSL 表达式）
 - D4 完整实现（需外置远端通道）
-- 审计外置 L2
-- C2 各级流程
+- ~~审计外置 L2~~ ✅ **已完成**（2026-09-29 核实：`dsh-fde-memory/lib/outbox.js` 整个模块落盘、`lib/audit.js` 的 `#outbox` 重放与 `#degraded` 保序闸已接线）
+- ~~C2 各级流程~~ ✅ **已完成**（2026-09-29 核实：`dsh-fde-phase/lib/change-flow.js:59` 的 `REQUIRED_CHECKS` 按 L0/L1/L2 分列，`tests/_fde_c2_test.mjs` 在跑）
 - restrict 第二批（两个时序问题需先探明）
 
 **P2**
@@ -312,8 +363,8 @@
 | 一物两名 | 目录 `dsh-fde-ontology-gate` vs 注册名 `fde-ontology-gate` |
 | 一名两物 | 「**D1**」既指 spec §3 护栏绑定，又指 §8 审计外置四层 |
 | 4 项未验完 | 见 [功能对照表 §4](docs/01-overview/feature-matrix.md) |
-| 无版本控制 | 见 [版本管理记录](docs/02-development/releases.md) |
-| 无成本台账 | 见 [成本与资源统计](docs/04-retrospective/cost-resources.md) |
+| ~~无版本控制~~ ✅ **已解决（2026-09-29）** | 已纳入 git（`.git/` 在位），并有本文件逐条记录 |
+| ~~无成本台账~~ 🟡 **一半解决** | **Token 用量已实测**（566,556,196，见[成本与资源统计](docs/04-retrospective/cost-resources.md)）；**费用金额仍缺**（账单不在磁盘上） |
 
 ---
 

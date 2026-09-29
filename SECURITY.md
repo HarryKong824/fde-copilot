@@ -45,7 +45,7 @@
 | 1 | **不支持多租户 / 多用户** | 设计场景是**单机单用户**；无账号系统、无角色、无数据隔离 |
 | 2 | **并发控制只到「单写者锁」** | 防止同时写坏一个文件；**不是**事务 |
 | 3 | **无数据库** | 状态用 YAML、审计用 JSONL——**刻意选择**（可人工查看与修复） |
-| 4 | **审计外置只做 L1** | L2（outbox）/ L3（TelemetryBackend）/ L4（交叉校验）**PoC 未实现** |
+| 4 | **审计外置 L2/L3/L4 已接线，但端到端未验** | L2（outbox 重放）/ L3（TelemetryBackend）/ L4（交叉校验）**代码已在位并接线**：`dsh-fde-memory/lib/audit.js` 的 `#outbox` + `#degraded` 保序闸与重放、`dsh-fde-memory/lib/index.js:195` 装配 `installTelemetrySink`、`dsh-fde-phase/lib/guard.js:22` 调 `crossCheckRemoteSync`。**但「真实投递到远端 / 断网降级 / 恢复后补传」的端到端从未在真环境跑过** —— 见[功能对照表 §4.4](docs/01-overview/feature-matrix.md)。<br>（本条 2026-09-29 订正：原文写「PoC 未实现」，与代码不符。） |
 | 5 | **D1 的 `impl` 是 DSL 表达式** | 不是 spec 要求的「已注册的可执行函数」（**主动降级**，理由：避免开出代码执行面） |
 | 6 | **D4 未完整实现** | 需要外置远端通道 |
 | 7 | **依赖宿主的访问控制** | 登录 / 鉴权由 **DSH 宿主**负责，插件不做 |
@@ -61,9 +61,9 @@
 | 项 | 内容 | 记录出处 |
 |---|---|---|
 | **三份审计链 schema 不统一** | gate 用 `type`/`tool`+`decision`/`event`；memory 用 **`kind`** ⇒ 排查脚本必须写 `x.type ?? x.kind` | [架构说明 §9](docs/01-overview/architecture.md) |
-| **`tools/_replay_phase_audit.mjs` 崩溃零输出** | 遇坏 JSON 会 `SyntaxError` 崩溃 + **零输出** ⇒ **它恰恰是「链坏时才跑」的那个** ⇒ **报警能力为零** | [Bug 台账 A 级 #9](docs/02-development/issue-log.md) |
-| **4 项功能未在真环境验完** | 见功能对照表 §4 | [功能对照表](docs/01-overview/feature-matrix.md) |
-| **无版本控制** | 7 天 35 次改动**无法逐行追溯** | [版本管理记录](docs/02-development/releases.md) |
+| ~~**`tools/_replay_phase_audit.mjs` 崩溃零输出**~~ ✅ **已修复（2026-09-29）** | 原状：遇坏 JSON 会 `SyntaxError` 崩溃 + **零输出** ⇒ **它恰恰是「链坏时才跑」的那个** ⇒ **报警能力为零**。<br>**现状**：`JSON.parse` 已被 try/catch 包住（`:45-47` 逐行解析、`:86`/`:99` 两处 `.map` 返回 `null` 兜底），`:135` 有 `process.exitCode = bad === 0 ? 0 : 1`；当场跑过 `断链 0 处 / RESULT: CHAIN-INTACT / EXIT=0`。 | [Bug 台账 A 级 #9](docs/02-development/issue-log.md) |
+| **4 项功能未在真环境验完** | 见功能对照表 §4（**此条仍成立**） | [功能对照表](docs/01-overview/feature-matrix.md) |
+| ~~**无版本控制**~~ ✅ **已修复（2026-09-29）** | 原状：7 天 35 次改动**无法逐行追溯**。<br>**现状**：已纳入 git（`.git/` 在位，`git rev-parse --is-inside-work-tree` = true），并有 `CHANGELOG.md` 逐条记录；`v0.0.1` 标签打在远端。 | [版本管理记录](docs/02-development/releases.md) |
 
 ---
 

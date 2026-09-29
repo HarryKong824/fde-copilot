@@ -295,7 +295,11 @@ linkHash(prevHash, record) = sha256(prevHash + '\n' + JSON.stringify(record))
 
 ## 五、核心接口设计
 
-### 5.1 工具接口（19 个）
+### 5.1 工具接口（**20** 个）
+
+> 📌 **2026-09-29 订正**：标题此前写「19 个」，**与它自己的表格矛盾** —— 下表实列 **20 行**
+> （gate 5 + dsl 2 + phase 6 + memory 7）。三个独立口径对拍一致：
+> `grep -rho 'tools\.register(' dsh-fde-*/lib/ | wc -l` = **20**；按插件分列同上；下表逐行数也是 20。
 
 所有工具遵守**同一套约定**：
 

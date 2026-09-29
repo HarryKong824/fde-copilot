@@ -55,7 +55,11 @@
 
 ### 三条最值得记住的
 
-#### 🔴 #9 `tools/_replay_phase_audit.mjs`——**报警器自己不会报警**
+#### 🔴 #9 `tools/_replay_phase_audit.mjs`——**报警器自己不会报警** ✅ **已修复（2026-09-29）**
+
+> **现状**：`JSON.parse` 已被 try/catch 包住（`:45-47` 逐行解析、`:86` / `:99` 两处 `.map` 均 `catch → null` 兜底），
+> `:135` 为 `process.exitCode = bad === 0 ? 0 : 1`。当场跑过：`断链 0 处 / RESULT: CHAIN-INTACT / EXIT=0`。
+> **下面保留的是当时的事故形状**——因为它记的是"教训"，不是"当前状态"。
 
 ```
 lib 里裸取：JSON.parse(line)          ← 链有一行坏，就 SyntaxError

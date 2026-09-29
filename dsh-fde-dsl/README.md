@@ -298,9 +298,9 @@ copy examples\logic.yaml   E:\ontologyRoot\logic.yaml
 
 | Stage | 模块 | 依赖 |
 |---|---|---|
-| 2 | 记忆系统 v3（state.yaml 状态机 + 写入器 source 防污染 + 置信度规则化推导 + 单写者锁 + SCHEMA 迁移） | 独立，未做 |
+| 2 | 记忆系统 v3（state.yaml 状态机 + 写入器 source 防污染 + 置信度规则化推导 + 单写者锁 + SCHEMA 迁移） | ✅ **均已实现**（2026-09-29 订正）：`dsh-fde-phase/lib/state.js`（单写者锁 + 原子 rename + `revision`）、`dsh-fde-memory/lib/decisions.js`（`source` 三分防污染）、`lib/confidence.js:43` `deriveConfidence`、`lib/schema-version.js:43` `migrate`。<br>⚠️ 唯一保留：**SCHEMA 迁移只有骨架**（`CHAIN` 为空，当前只有 v1 ⇒ 无真实迁移路径）。原文「独立，未做」与代码不符 |
 | 5 / 7 | Phase 流转 + D1/D2/D5 deny + fail-closed 行业判定 | 需 Stage 2 |
-| 6 | 审计外置三层 + outbox 重放 + 脱敏 + 离线降级 | 需 Stage 5 |
+| 6 | 审计外置三层 + outbox 重放 + 脱敏 + 离线降级 | ✅ **已实现**（2026-09-29 订正）：`dsh-fde-memory/lib/outbox.js`（重放）、`lib/telemetry-sink.js:97,137`（三层 HTTP 只写端点 + `evaluateRemote` 降级）、`lib/audit.js`（脱敏）。<br>⚠️ **端到端未验**（真实投递 / 断网降级 / 恢复补传） |
 | 8 / 9 / 10 | Zone A 清单 / R2 认知摩擦 / L0-L1 变更通道 | 需 Stage 2、5 |
 | 12 | break-glass + 端到端跑真实项目 | 全部 |
 

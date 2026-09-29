@@ -49,7 +49,7 @@
 | 文档 | 内容 |
 |---|---|
 | [项目整体总结报告](04-retrospective/summary.md) | 做成什么、时间线、**做对了什么**、**不足与反思**、结论 |
-| [成本与资源统计](04-retrospective/cost-resources.md) | ⚠️ **无 Token/费用数据**——只有可复算的工程量 + 明确的待补充项 |
+| [成本与资源统计](04-retrospective/cost-resources.md) | ✅ **Token 用量已实测**（566,556,196，可复算）；⚠️ **费用金额仍缺**（账单不在磁盘上） |
 | [后续迭代规划](04-retrospective/roadmap.md) | P0–P3 分级 + 推进顺序 + 两条提醒 |
 
 ### 五、AI 开发专属沉淀（4 份）

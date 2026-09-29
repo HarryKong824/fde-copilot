@@ -835,7 +835,11 @@ if (persisted) for (const id of missed) this.#missedAgents.add(id)
    **修法**：`#degraded` —— 上一条没写进磁盘 ⇒ **后续记录一律进 outbox**，不再尝试写盘，直到 `flush()` 成功；
    `flush()` 把失败的按**原序**放回队首。⇒ 磁盘要么停在 A（`A` 连续），要么 flush 后是 `A,B,C`（连续），**永不错序**。
    副作用（刻意的）：写盘持续失败期间**所有**记录都在内存里 ⇒ `pending` 单调涨，链停在最后一个成功点。
-   ⚠️ **同一个缺陷在 `dsh-fde-ontology-gate/lib/audit.js` 里存在（源码逐行对照一致）**，按边界（不动门禁实现）**未改**，待单独立项。
+   ~~⚠️ **同一个缺陷在 `dsh-fde-ontology-gate/lib/audit.js` 里存在（源码逐行对照一致）**，按边界（不动门禁实现）**未改**，待单独立项。~~
+   > ✅ **已订正（2026-09-29）**：这段话**已过时**。gate 侧**同一道闸已在位** ——
+   > `dsh-fde-ontology-gate/lib/audit.js:55` 有 `#degraded = false`，`:170-189` 是排队闸
+   > （注释自述「2026-09-26，移植自 phase 补丁 3」，`:180` 的拒绝理由为「前一条尚未落盘 ⇒ 本条一并排队（保序）」）。
+   > ⇒ **不是"未改、待立项"，是"已于 2026-09-26 移植过去"**。
 
 4. **「打开会话」在 DSH 上没有"只看不碰"的路径，且常常不必做。**
    端点清单里**没有** `session/open` / `resume` / `load`（只有 `list` / `page` / `prompt` …）
