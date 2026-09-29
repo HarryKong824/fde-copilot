@@ -77,5 +77,11 @@ if (process.env.FDE_INVERT === '1') {
   check('[INVERT] 故意失败以验证退出码敏感', true, false)
 }
 console.log('symlink test:', symState)
-console.log(`\nRESULT pass=${pass} fail=${fail}`)
+// ⚠️ 跳过数必须写进 RESULT 行本身。
+// 本套件的 pass 数**随环境变化**（能建符号链接的机器 pass=8，建不了的 pass=7），
+// 而只印在上一行的 SKIP 说明在「只看 RESULT」的最小 grep 面下不存在 ⇒
+// 读者会把「少跑 1 条」读成「跑了 7 条」。
+const skipped = symState === 'RAN' ? 0 : 1
+console.log(`\nRESULT pass=${pass} fail=${fail} skip=${skipped}` +
+  (skipped ? `（跳过的用例: symlink —— 见上一行原因；本机 pass 数因此比 CI 少 1）` : ''))
 process.exit(fail === 0 ? 0 : 1)

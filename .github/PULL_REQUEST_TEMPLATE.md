@@ -33,7 +33,8 @@ ALL-TESTS-GREEN
 
 ```bash
 $ node _deploy_diff.mjs
-# 期望：ALL_MATCH
+# 期望：末行 判定：ALL_MATCH（退出码 0）
+# 无参数 = 对拍全部 4 个插件；没有部署时它是 SKIP + 77，**不是** ALL_MATCH
 ```
 
 ## ⚠️ 没做完 / 没验证的部分

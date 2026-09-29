@@ -75,7 +75,11 @@ E:\DSH-desktop\DeepSeek Harness\data\dsh-home
 
 ```bash
 node _deploy_diff.mjs
-#   期望：ALL_MATCH
+#   不传参数 = 对拍全部 4 个插件。期望：末行 判定：ALL_MATCH
+#   退出码：0 = 4 个插件全一致；1 = 有差异；77 = 本机没有任何部署（**无法验证，不等于一致**）
+#   没有那份部署时它报 SKIP 而不是 ALL_MATCH —— 设 FDE_DSH_HOME=<你的 dsh-home> 即可真跑。
+#   只想对拍一个插件（原用法，仍然可用）：
+#     node _deploy_diff.mjs dsh-fde-phase "<DSH_HOME>/profiles/web/node_modules/dsh-fde-phase"
 ```
 
 > ⚠️ **对拍的域包含 `README.md`，不只是 `lib/*.js`**。本项目的教训：只改了源 README 忘了同步副本，`_deploy_diff.mjs` 报 `HAS-DIFF`，而 14 个文件里**只有这一处**不一致 —— 极易被误读成「代码没同步」。

@@ -56,7 +56,9 @@ bash _run_all_tests.sh
 
 ```bash
 node _deploy_diff.mjs
-#   期望：ALL_MATCH
+#   不传参数 = 对拍全部 4 个插件。期望：末行 判定：ALL_MATCH
+#   退出码：0 = 全一致；1 = 有差异；77 = 本机没有任何部署（**无法验证，不等于一致**）
+#   没有那份部署时它会报 SKIP 并 exit 77 —— **别把它读成 ALL_MATCH**。
 ```
 
 > ⚠️ **对拍域包含 `README.md`**，不只是 `lib/*.js`。
