@@ -1,61 +1,69 @@
-版权所有 (c) 2026 HarryKong824
-ALL RIGHTS RESERVED
+MIT License
+
+Copyright (c) 2026 HarryKong824
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
 
 ────────────────────────────────────────────────────────────────────────
-⚠️ 本仓库当前【未授予任何开源许可证】—— 这是一个【待决状态】，不是最终选择。
+⚠️ 附加声明（不修改上述 MIT 条款，仅为如实披露）
 ────────────────────────────────────────────────────────────────────────
 
-在授予许可证之前，有两个【尚未确认】的法律事实：
+一、本软件由 AI 生成
 
-  ① 数据敏感性
-     本仓库及其配套的受控本体区（E:\ontologyRoot\）中包含【医疗领域】的示例内容：
-       · objects.yaml  —— dose_mg（剂量）/ site（部位）/ is_first_visit（初诊）
-       · compliance.yaml —— 「患者知情同意」「MRI 脱敏」「临床决策」「Dr. Zhang」
-     需确认：这些是【通用示例】还是【来自真实客户的业务】？
-     若来自真实客户 —— 公开它们可能违反客户保密义务。
+    本仓库的源码、测试与文档【全部由 AI 工具生成】，人类负责需求、决策与验收。
+      · 主要实现：Claude Code
+      · 早期并行实现：WorkBuddy（2026-09-28 退出）
+      · 阶段性接力：Trae
 
-  ② 宿主平台许可
-     本项目是【DeepSeek Harness (DSH)】的插件。DSH 是闭源商业软件。
-     需确认：DSH 的许可条款是否允许第三方开发并【公开分发】插件？
+    AI 生成内容的著作权归属在法律上【尚无统一结论】。
+    本声明不构成任何形式的额外权利主张或权利放弃。
 
-  ⇒ 在这两条确认之前，本仓库不应被设为 public。
+    详见：docs/05-ai-development/ai-tools.md
+          docs/05-ai-development/ai-code-risks.md
 
-完整的分析见：
-  docs/05-ai-development/data-licensing.md
+二、本软件涉及领域敏感内容
 
-────────────────────────────────────────────────────────────────────────
-关于 AI 生成内容的说明
-────────────────────────────────────────────────────────────────────────
+    本仓库配套的受控本体区（E:\ontologyRoot\）中包含【医疗领域】的示例内容
+    （dose_mg / site / is_first_visit / 患者知情同意 / MRI 脱敏 等）。
 
-本仓库的源码、测试与文档【全部由 AI 工具生成】，人类负责需求、决策与验收。
+    经版权持有人确认：这些为【通用示例】，用于演示本体与门禁机制，
+    【不来自任何真实客户的业务数据】，不含任何真实患者信息。
 
-  · 主要实现：Claude Code
-  · 早期并行实现：WorkBuddy（2026-09-28 退出）
-  · 阶段性接力：Trae
+    详见：docs/05-ai-development/data-licensing.md
 
-⚠️ AI 生成内容的著作权归属在法律上【尚无统一结论】。
-   本声明不构成任何形式的权利主张或权利放弃。
+三、本软件运行于第三方宿主平台
 
-声明人在此如实披露此事实，因为使用者有权知道这一点。
+    本软件是【DeepSeek Harness (DSH)】的插件。DSH 是独立的闭源商业软件，
+    其著作权归其各自权利人所有，不在本许可证的授权范围内。
+    使用本软件不构成对 DSH 的任何授权，反之亦然。
 
-详见：docs/05-ai-development/ai-tools.md
-      docs/05-ai-development/ai-code-risks.md
+四、不构成专业意见
 
-────────────────────────────────────────────────────────────────────────
-无担保声明
-────────────────────────────────────────────────────────────────────────
+    本软件涉及【业务规则校验】与【合规门禁】，但它:
+      · 【不能】替代执业人员的专业判断
+      · 【不是】唯一的合规依据
+      · 【不适用】于多用户 / 生产环境（无账号系统、无数据隔离）
+      · 【不支持】接入真实患者数据而未做评估
 
-本软件按「原样」提供，不附带任何明示或暗示的担保，包括但不限于对
-适销性、特定用途适用性及不侵权的担保。
-
-在任何情况下，作者或版权持有人均不对因本软件或本软件的使用或其他
-交易而产生的任何索赔、损害或其他责任负责，无论是在合同诉讼、侵权
-诉讼或其他方面。
-
-⚠️ 特别提示：本软件涉及【业务规则校验】与【合规门禁】。
-   它【不能】替代执业人员的专业判断，也【不是】唯一的合规依据。
+    详见：SECURITY.md 第六节
 
 ────────────────────────────────────────────────────────────────────────
 
-若需变更为具体的开源许可证（MIT / Apache-2.0 / AGPL-3.0 等），
-请在确认上述两个法律事实后，以本文件整体替换。
+若希望改用其它许可证（Apache-2.0 / AGPL-3.0 / 或改为专有），
+以本文件整体替换即可。

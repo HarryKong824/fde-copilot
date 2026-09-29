@@ -110,7 +110,7 @@ node _deploy_diff.mjs      # 期望：ALL_MATCH
 ```
 .
 ├── README.md                    ← 本文件
-├── LICENSE                      ← ⚠️ 待定，见「许可证」
+├── LICENSE                      ← MIT + 四项如实声明
 ├── CHANGELOG.md
 ├── CONTRIBUTING.md
 ├── SECURITY.md                  ← 报漏洞的私密渠道 + 已知安全边界
@@ -230,18 +230,21 @@ node _deploy_diff.mjs      # 期望：ALL_MATCH
 
 ---
 
-## ⚠️ 许可证
+## 许可证
 
-**本仓库当前未授予任何开源许可证。**
+**MIT** —— 见 [`LICENSE`](LICENSE)。
 
-许可证的选择取决于两个**尚未确认**的事实：
+> ✅ **已确认的两个前提**（由版权持有人 HarryKong824 于 2026-09-29 确认）：
+>
+> 1. `E:\ontologyRoot\` 里的医疗领域示例为**通用示例**，不来自真实客户业务、不含真实患者信息；
+> 2. 本项目**以 MIT 公开**。
+>
+> 📌 `LICENSE` 中另附**四项如实声明**（AI 生成 / 领域敏感内容 / 第三方宿主 / 不构成专业意见）——
+> 它们**不修改 MIT 条款**，只是披露事实。
 
-1. `E:\ontologyRoot\` 里的**医疗领域示例**（`dose_mg` / `site` / `is_first_visit` / 患者知情同意）
-   是否涉及**客户保密义务**？
-2. **DSH 的许可条款**是否允许第三方开发并**公开分发**插件？
+**如需改用其它许可证**（Apache-2.0 / AGPL-3.0 / 专有），整体替换 `LICENSE` 即可。
 
-> 🔴 **这两条不确认，不建议设为 public。**
-> 完整分析 → [`docs/05-ai-development/data-licensing.md`](docs/05-ai-development/data-licensing.md)
+> 相关的深度分析 → [`docs/05-ai-development/data-licensing.md`](docs/05-ai-development/data-licensing.md)
 
 ---
 
