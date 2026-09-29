@@ -113,7 +113,8 @@
 | P1-2 | **D4 完整实现** | 本轮不做（**需要外置远端**） | 接一个真实的外部审批通道 |
 | P1-3 | **审计外置 L2** | ✅ **已实现**（2026-09-29 订正）：`dsh-fde-memory/lib/outbox.js` 整个模块已落盘（`writeOutboxSync:103` / `listOutboxSync:122`），`lib/audit.js` 的 `#outbox` + `#degraded` 保序闸与重放已接线。原文「**只留了接口**，没实现」与代码不符 | 落 outbox 机制 |
 | P1-4 | **C2 各级流程** | ✅ **已实现**（2026-09-29 订正）：`dsh-fde-phase/lib/change-flow.js:59` 的 `REQUIRED_CHECKS` 按 L0/L1/L2 分列 + `NEEDS_APPROVAL`，`:192` `describeIncomplete`；`tests/_fde_c2_test.mjs` 在跑。原文「C2 留后」与代码不符 | 让 L0/L1/L2 各自走不同的流程 |
-| P1-5 | **restrict 第二批的两个时序问题** | 未解决 | ① 拿 `agent.ctx` 的**时机**；② `restrictableNames` 是**调用当刻的快照** |
+| P1-5 | ~~**restrict 第二批的两个时序问题**~~ ✅ **已实现（2026-09-29 订正 —— 本行曾是一条 stale red）** | ⚠️ 原文写「未解决」，与代码不符：`dsh-fde-phase/lib/restrict.js` 整个模块在位（633 行），`:633` 真调 `agent.ctx.tools.restrict({deny})`。**两个时序问题各自有明确处置**：① `agent.ctx.tools` **每次现取**（`:626` 注释逐字写明"缓存到长期变量会拿到陈旧代理"）；② 名字快照问题由"先全名单试、因名字不存在失败就用剩下的重挂"接住（`#tryRestrict`，`:630-645`），并立了「**一个名字不存在 ≠ 整条保护失效**」的口径。**活证据**：真链 `phase.jsonl` 有 **39 条** `restrict-applied`，实测 `denied:["pwsh"]` 生效（见 `dsh-header-toolset-diff-not-count`）。 | 原目标（三条硬约束）已在实现中 |
+
 
 **依据**：《功能完成对照表》§5、《需求变更台账》CR-04 / CR-03 / CR-08 / CR-10、《技术架构说明》。
 
@@ -152,13 +153,13 @@
 
 ---
 
-### P2-3 🟠 **把 `tools/_replay_phase_audit.mjs` 的崩溃改成「明确报告无法判定」**
+### P2-3 ~~🟠 把 `tools/_replay_phase_audit.mjs` 的崩溃改成「明确报告无法判定」~~ ✅ **已修复（2026-09-29 订正 —— 本行曾是一条 stale red）**
 
 | 项 | 内容 |
 |---|---|
-| **现状** | `_inbox/0055` 发现：遇坏 JSON 会 `SyntaxError` **崩溃 + 零输出** |
-| **为什么严重** | **它恰恰是「链坏的时候才会跑」的那个脚本** ⇒ **报警能力为零** |
-| **目标** | 崩溃必须被捕获，并**明确输出**「某行无法解析 ⇒ 完整性**无法判定**」（而不是静默退出） |
+| **原状** | `_inbox/0055` 发现：遇坏 JSON 会 `SyntaxError` **崩溃 + 零输出** ⇒ **它恰恰是「链坏的时候才会跑」的那个** ⇒ **报警能力为零** |
+| **现状** | 已修：`:45-47` 逐行 `try/catch` 解析、`:86` 与 `:99` 两处 `.map` 返回 `null` 兜底、`:135` `process.exitCode = bad === 0 ? 0 : 1`。当场跑过 `断链 0 处 / RESULT: CHAIN-INTACT / EXIT=0`（本次活验又跑了一遍，同上） |
+| **怎么发现的** | 2026-09-29 复核待办清单时**回源码核对**，发现此项早已完成而本文没改 ⇒ **正是本项目定义的 stale red**（文档朝"更严重"的方向撒谎） |
 
 **依据**：《问题与 Bug 台账》A 级 #9。
 
