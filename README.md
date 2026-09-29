@@ -1,7 +1,10 @@
 # FDE Copilot
 
-> **给 AI 助手装上工程护栏的插件套件** —— 让 AI 在改业务规则、推进项目阶段时，**没通过校验就动不了**，
-> 且所有动作都被记在一本**改不掉的账**上。
+> **把 Palantir 式 FDE（前向部署工程师）的交付动作，固化成一套 AI 能照着走的插件。**
+>
+> 它以**本体（Ontology）**当业务规则的唯一权威，用 **15 个交付阶段**驱动 AI 从「接入客户」一路走到「移交 / 退出」：
+> 每走到一个阶段，就按那个阶段该有的条件校验业务规则；改本体只能走唯一入口，改完还要过「规则可信度」校验。
+> **门禁与审计是保证 AI 不跑偏的实现机制，不是产品本身。**
 
 [![State](https://img.shields.io/badge/state-PoC%200.0.1-orange)](#项目状态)
 [![Tests](https://img.shields.io/badge/regression-41%20suites%20green-brightgreen)](docs/03-usage/deployment.md)
@@ -12,20 +15,40 @@
 
 ## 这是什么
 
-一套跑在 **DeepSeek Harness（DSH）** 上的插件，由四个互相协作的模块组成：
+**一句话**：它让 AI 扮演一名 FDE —— 按「干系人对齐 → Bootcamp → Demo → 本体定义 → AIP 叠加 → 部署 → 变更管理 → 评估飞轮 → 产品化 → 移交」的节奏做交付，
+而不是拿到一句需求就直接去改代码。
+
+### 15 个交付阶段（4 个区）
+
+| 区 | 阶段 |
+|---|---|
+| **A 切入** | `0.1` Connect ｜ `0.2` Site Survey ｜ `0.3` Stakeholder Map ｜ `0.4` Success Criteria |
+| **B 共建** | `1` Bootcamp + 场景发现 ｜ `2` Demo 深化 + 数据接入 ｜ `3` Ontology 完整定义 ｜ `4` AIP 叠加 |
+| **C 落地** | `5` 交付与移交准备 ｜ `6` Deploy ｜ `7` Change Management ｜ `8` Eval Flywheel ｜ `9` Productize |
+| **D 收尾** | `10` Handoff ｜ `11` Disengage |
+
+三条硬规则（由插件强制，不靠嘱咐）：
+
+1. **阶段只能一格一格推进**（`current → next`）—— 跳过「Ontology 完整定义」就等于跳过 D1 门禁；
+2. **每次改本体都要定级**：`L0` / `L1` / `L2`，看**语义载荷**而不是看 diff 形状；
+3. **本体节点有成熟度**：`draft` → `verified` → `locked`，**只能升不能降**。
+
+### 靠什么实现：四个互相协作的插件
+
+跑在 **DeepSeek Harness（DSH）** 上：
 
 | 插件 | 管什么 |
 |---|---|
-| **`dsh-fde-ontology-gate`** | **谁**能在什么条件下改本体（业务规则） |
-| **`dsh-fde-dsl`** | 改出来的**规则**能不能信（D3）+ **护栏**绑没绑好（D1） |
-| **`dsh-fde-phase`** | 现在处在**哪个业务阶段**、能不能推进 |
-| **`dsh-fde-memory`** | 决策、清单、干系人、笔记，以及**审计采集** |
+| **`dsh-fde-ontology-gate`** | **谁**能在什么条件下改本体（业务规则）+ 变更定级 |
+| **`dsh-fde-dsl`** | 改出来的**规则**能不能信（D1 护栏 + D3 反例） |
+| **`dsh-fde-phase`** | 现在处在**哪个阶段**、能不能推进 |
+| **`dsh-fde-memory`** | 决策、清单、干系人、实验沙箱、本体成熟度，以及**审计采集** |
 
-**共注册 19 个工具**，全部通过 `ctx.tools.guard` 挂在宿主的工具调用链上。
+**共注册 20 个工具**，全部通过 `ctx.tools.guard` 挂在宿主的工具调用链上。
 
 ---
 
-## 为什么需要它
+## 为什么「门禁」必须做在机制层，而不是写在提示词里
 
 **「在提示词里提醒 AI 注意安全」是没用的——AI 可以不听。**
 
@@ -57,7 +80,7 @@
 ### 跑一遍回归（**不需要 DSH**）
 
 ```bash
-bash _run_all_tests.sh
+bash tests/_run_all_tests.sh
 #   期望最后两行（本机**没有**部署 DSH 时）：
 #   共 41 个套件；已跑 37；跳过 4（白名单内，需本机部署的 DSH）；失败 0；疑似空程序 0
 #   ALL-TESTS-GREEN
@@ -76,7 +99,7 @@ cp -r dsh-fde-*  <DSH_HOME>/profiles/web/node_modules/
 #    <DSH_HOME>/profiles/web/cordis.patch.yml
 
 # 3. 对拍源 ↔ 副本
-node _deploy_diff.mjs      # 期望：ALL_MATCH
+node tests/_deploy_diff.mjs      # 期望：ALL_MATCH
 
 # 4. ⚠️ 重启 DSH —— 改了 lib/*.js 不重启等于没改
 ```
@@ -120,7 +143,7 @@ node _deploy_diff.mjs      # 期望：ALL_MATCH
 ├── CONTRIBUTING.md
 ├── SECURITY.md                  ← 报漏洞的私密渠道 + 已知安全边界
 ├── CODE_OF_CONDUCT.md
-├── package.json                 ← `npm test` 入口（= bash _run_all_tests.sh）
+├── package.json                 ← `npm test` 入口（= bash tests/_run_all_tests.sh）
 ├── .gitignore                   ← ⚠️ node_modules 有反常规处理，改前先读
 ├── .gitattributes               ← ⚠️ 强制 LF；删了会让 .sh 在 Windows 上坏掉
 ├── .github/
@@ -129,7 +152,7 @@ node _deploy_diff.mjs      # 期望：ALL_MATCH
 │   ├── ISSUE_TEMPLATE/feature_request.md
 │   └── PULL_REQUEST_TEMPLATE.md
 │
-├── docs/                        ← 📚 17 份交付文档（从这里开始读）
+├── docs/                        ← 📚 18 份交付文档（从这里开始读）
 │   ├── README.md                  导航中枢
 │   ├── 01-overview/               项目说明书 · 功能对照表 · 技术架构
 │   ├── 02-development/            开发日志 · 变更台账 · Bug台账 · 版本记录
@@ -137,24 +160,34 @@ node _deploy_diff.mjs      # 期望：ALL_MATCH
 │   ├── 04-retrospective/          总结报告 · 成本统计 · 迭代规划
 │   └── 05-ai-development/         AI工具清单 · Prompt库 · 代码风险 · 数据版权
 │
-├── dsh-fde-ontology-gate/       ← 插件 1（16 文件 / 4,797 行）
-├── dsh-fde-dsl/                 ← 插件 2（12 文件 / 2,211 行）
-├── dsh-fde-phase/               ← 插件 3（22 文件 / 5,528 行）
-├── dsh-fde-memory/              ← 插件 4（21 文件 / 4,195 行）
+├── dsh-fde-ontology-gate/       ← 插件 1（20 文件 / 7,042 行）
+├── dsh-fde-dsl/                 ← 插件 2（17 文件 / 2,728 行）
+├── dsh-fde-phase/               ← 插件 3（25 文件 / 6,625 行）
+├── dsh-fde-memory/              ← 插件 4（26 文件 / 5,055 行）
 │
-├── _*_test.mjs                  ← 41 套离线回归
-├── _*_live*.mjs                 ← 活体验证脚本（需 DSH 在跑）
-├── _run_all_tests.sh            ← 全量回归入口
-├── _fixtures/                   ← 回归夹具
+├── tests/                       ← 41 套离线回归（+ 7 个它们真正 import/spawn 的脚本，必须同目录）
+│   ├── README.md                  这个文件夹里有什么、怎么跑
+│   ├── _run_all_tests.sh          全量回归入口（**从任意目录调用都行**，脚本会自定位）
+│   ├── _*_test.mjs                41 套套件
+│   └── _fixtures/                 回归夹具
+├── tools/                       ← 115 个独立工具脚本（活验 / 勘察 / 一次性，**不进回归**）
+│   └── README.md
+├── evidence/                    ← 历史测试产物归档（⚠️ 已在 .gitignore，不进仓库）
 └── node_modules/@deepseek-ai/   ← ⚠️ 测试桩，【必须保留】，见 .gitignore
 ```
 
-> ✅ **本结构已被验证**：从本仓库**克隆到干净目录**（290 个文件），`bash _run_all_tests.sh` → **ALL-TESTS-GREEN**。
-> 这证明 `.gitignore` 里的 node_modules 例外有效、LF 归一化不破坏夹具。
+> ✅ **本结构已被验证**：从本仓库**克隆到干净目录**后 `bash tests/_run_all_tests.sh` → **ALL-TESTS-GREEN**。
+> 这证明 `.gitignore` 里的 node_modules 例外有效、LF 归一化不破坏夹具、脚本的子目录自定位有效。
 > （本机**有**部署时 41/41；干净机器上是 37 跑 + 4 跳过，见下节。）
 
-> ⚠️ **脚本为什么不放进子目录**：它们用 `./dsh-fde-phase/lib/state.js` 这类**相对导入**，
-> 移动会**直接破坏**已验证的 41 套回归。这是**不可移动的硬约束**，不是没整理。
+> 📌 **关于「脚本放进子目录」这件事，之前写在 README 里的理由是错的**
+> （原文：「它们用 `./dsh-fde-phase/lib/state.js` 相对导入，移动会直接破坏 41 套回归，是不可移动的硬约束」）。
+> **2026-09-29 实测证伪**：移动**确实**要顺手改两类路径——① 相对导入 `./dsh-fde-*` → `../dsh-fde-*`；
+> ② 少数按「我所在目录 = 仓库根」拼的运行时路径。改完 **41/41 全绿、0 失败**。
+> ⇒ 它不是「不可移动」，是「移动时要顺手改路径」。**仓库根的条目数从 `182` 降到 `19`**
+> （= 10 个文件 + 9 个目录；用 `git ls-tree --name-only HEAD | wc -l` 与
+> `git ls-files | awk -F/ 'NF==1' | wc -l` + 首层目录数对拍得出）。
+> （仍在根目录出现的只有 `_*_out.txt` 这类产物，已 gitignore、不进仓库。）
 
 ### ⚠️ 哪些脚本你能跑，哪些跑不了
 
@@ -163,9 +196,9 @@ node _deploy_diff.mjs      # 期望：ALL_MATCH
 | 类别 | 能否直接跑 | 说明 |
 |---|---|---|
 | `_*_test.mjs`（**41 套**） | ✅ **能** —— 限 **Windows** + **Node ≥ 22.15** | 路径从**脚本自身位置**推导，不含作者本机绝对路径。<br>2026-09-29 实测：换目录也能跑，且改坏插件会让对应套件**变红**（变异验证过）。 |
-| ↳ 其中 **4 套** | ⚠️ **要本机已部署 DSH**，否则**明确跳过** | `_fde_e1_wiring_test.mjs`、`_fde_e2_test.mjs`、`_fde_e5_test.mjs`、`_fde_phase_wiring_test.mjs`。<br>它们要读你本机已部署的插件副本 / 部署配置 ⇒ **不是纯离线套件**。<br>没有那份部署时它们 `exit 77`（跳过），汇总行会报出「跳过 4」。<br>设 `FDE_DSH_HOME=<你的 dsh-home>` 即可让它们真跑。 |
-| `_deploy_diff.mjs` | ✅ **能**（限 Windows，且**需本机有部署**） | **不传参数 = 对拍全部 4 个插件**（就是下面部署步骤里那条命令）。<br>本机没有那份部署时它会明确报 `SKIP` 并 `exit 77`，**不会**报 `ALL_MATCH`；设 `FDE_DSH_HOME=<你的 dsh-home>` 即可真跑。<br>也支持原用法 `node _deploy_diff.mjs <源目录> <副本目录>` 只对拍一对。<br>退出码：`0` 全一致 / `1` 有差异 / `77` 无部署可测（**不是**一致）。 |
-| `_token_usage_report.mjs` | ✅ **能**（跨平台） | 纯统计工具，路径由命令行参数给。 |
+| ↳ 其中 **4 套** | ⚠️ **要本机已部署 DSH**，否则**明确跳过** | `tests/_fde_e1_wiring_test.mjs`、`tests/_fde_e2_test.mjs`、`tests/_fde_e5_test.mjs`、`tests/_fde_phase_wiring_test.mjs`。<br>它们要读你本机已部署的插件副本 / 部署配置 ⇒ **不是纯离线套件**。<br>没有那份部署时它们 `exit 77`（跳过），汇总行会报出「跳过 4」。<br>设 `FDE_DSH_HOME=<你的 dsh-home>` 即可让它们真跑。 |
+| `tests/_deploy_diff.mjs` | ✅ **能**（限 Windows，且**需本机有部署**） | **不传参数 = 对拍全部 4 个插件**（就是下面部署步骤里那条命令）。<br>本机没有那份部署时它会明确报 `SKIP` 并 `exit 77`，**不会**报 `ALL_MATCH`；设 `FDE_DSH_HOME=<你的 dsh-home>` 即可真跑。<br>也支持原用法 `node tests/_deploy_diff.mjs <源目录> <副本目录>` 只对拍一对。<br>退出码：`0` 全一致 / `1` 有差异 / `77` 无部署可测（**不是**一致）。 |
+| `tools/_token_usage_report.mjs` | ✅ **能**（跨平台） | 纯统计工具，路径由命令行参数给。 |
 | `_wb_*.mjs`（**4 个**） | ❌ **不能** | WorkBuddy（早期并行实现方，**2026-09-28 退出**）时期的**只读**探测脚本（探它的本机 IPC / 读它的会话记录）。<br>**保留是刻意的**：它们是那段协作的诚实记录（见 [AI 工具清单](docs/05-ai-development/ai-tools.md)），且本仓库公开的代码里**没有任何一处引用它们**。<br>⚠️ 它们也含作者本机路径，**算在上面那 40 个里** —— 删掉它们会让「40 个」这个计数失效。 |
 | `_*_live*.mjs`、`_cc_*.mjs`、`_dsh_*.mjs` 等（**40 个**） | ❌ **不能开箱即跑** | 它们是**活验仪器**：① 需要 **DSH 正在运行**；② 里面写死了作者本机路径（`C:/Users/DELL/...`）与 launch-token 文件位置。<br>（口径：`grep -rl "Users/DELL"` 命中的**根目录脚本**共 40 个；
 另命中 **4 份文档**，逐一列出以免读者数不出来 —— `README.md`、`CHANGELOG.md`、
@@ -181,8 +214,8 @@ node _deploy_diff.mjs      # 期望：ALL_MATCH
 > | `windows-latest`（GitHub 托管） | ✅ 全绿（修好下面②之后） |
 > | `ubuntu-latest` | ❌ **41 套挂 9 套** |
 >
-> 从失败断言能看出两处根因方向：`_gate_mode_test.mjs` 的断言原文是
-> 「**enforce 下路径命中应拒**」⇒ **路径语义**不同；`_shelltok_test.mjs` ⇒ **shell 分词语义**不同；
+> 从失败断言能看出两处根因方向：`tests/_gate_mode_test.mjs` 的断言原文是
+> 「**enforce 下路径命中应拒**」⇒ **路径语义**不同；`tests/_shelltok_test.mjs` ⇒ **shell 分词语义**不同；
 > 其余若干在导入期直接崩溃。
 >
 > **② Node 版本：不能低于 22.15。**
@@ -193,7 +226,7 @@ node _deploy_diff.mjs      # 期望：ALL_MATCH
 > | 22.15.0 | ✅ 有该导出（实测 `typeof === 'function'`） |
 > | 24.15.0 | ✅ 全绿 |
 >
-> 用到 zstd 的是**读 DSH 会话记录**的那几个脚本（`_tool_surface_check.mjs` 等）——
+> 用到 zstd 的是**读 DSH 会话记录**的那几个脚本（`tests/_tool_surface_check.mjs` 等）——
 > **插件 `lib/` 本身不用 zstd**，所以「跑插件」没有这个版本要求。
 > 下界已写进 `package.json` 的 `engines`。
 >
@@ -218,7 +251,7 @@ node _deploy_diff.mjs      # 期望：ALL_MATCH
 |---|---|---|
 | 1 | [项目说明书](docs/01-overview/project-brief.md) | 这是什么、为谁做、核心价值 |
 | 2 | [功能清单与对照表](docs/01-overview/feature-matrix.md) | **19 项功能的真实完成度**（含 4 项缺口） |
-| 3 | [技术架构说明](docs/01-overview/architecture.md) | 架构、数据、19 个工具接口、技术债 |
+| 3 | [技术架构说明](docs/01-overview/architecture.md) | 架构、数据、20 个工具接口、技术债 |
 | 4 | [用户操作手册](docs/03-usage/user-manual.md) | **不需要懂编程**——跟 AI 说一句话就行 |
 | 5 | [常见问题 FAQ](docs/03-usage/faq.md) | 20+ 个**真实踩过的坑** |
 
@@ -267,7 +300,7 @@ node _deploy_diff.mjs      # 期望：ALL_MATCH
 | 功能完成度 | 19 项中 **15 项活验完整**、4 项**部分完成**、**0 项未实现** |
 | 回归 | **41 套全绿** |
 | 运行时依赖 | **零** |
-| 界面 | ❌ 没有界面——它是一套装在 AI 助手上的护栏 |
+| 界面 | ❌ **没有界面** —— 它就长在 AI 助手的对话里，能力的形状是 20 个工具 + 每阶段的门禁 |
 | 多租户 | ❌ **不支持**——设计场景是**单机单用户** |
 
 **四个尚未验完的功能**（**不是没做，是没在真环境验完**）→ [功能对照表 §4](docs/01-overview/feature-matrix.md)

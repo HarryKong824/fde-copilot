@@ -20,7 +20,7 @@
 | **功能层面「未实现」的项** | **0** | — |
 | **设计偏离**（有意不照 spec 做，已记录理由） | **3** | F1 / F2 / F3 |
 | **PoC 降级**（实现方式弱于 spec 要求） | **2** | 见 §5 |
-| 离线回归套件 | **41 套，全绿** | `_run_all_tests.sh` → `ALL-TESTS-GREEN` |
+| 离线回归套件 | **41 套，全绿** | `tests/_run_all_tests.sh` → `ALL-TESTS-GREEN` |
 
 > ⚠️ **请特别注意这个区分**：本项目**没有「功能没做完」的项**。剩下的 4 项（2 部分活验 + 2 部分未验）都是**验证证据不全**，而不是**功能缺失**。每一条的具体原因见 §4。
 
@@ -122,21 +122,21 @@
 
 | # | spec 要求 | spec 节 | 最终落地 | 验证档 | 证据坐标 |
 |---|---|---|---|---|---|
-| 1 | deny 检查 D1/D2/D3/D5 四个门禁 | §3 | ✅ 全部实现 | 已实现+活验 | `dsh-fde-phase/lib/check-d2.js`、`check-d5.js`、`guard.js`；`_fde_d2d3_test.mjs` 47/0 |
-| 2 | D3 的 `DraftReference` 铁律 | §4 | ✅ 实现 | 已实现+**部分活验** | `dsh-fde-dsl/lib/`；`_fde_dsl_test.mjs`；活验 phase 链 `seq=119` |
-| 3 | 15 Phase 表 + `current → next(+1)` + 守卫单调否决 | §2/§9.3 | ✅ 实现 | 已实现+活验 | `dsh-fde-phase/lib/phases.js:36-73`；`_fde_phase_test.mjs` 44/0 |
-| 4 | maturity `draft/verified/locked` 单向 + 变更历史 | §4 | ✅ 实现 | 已实现+活验 | `dsh-fde-memory/lib/maturity.js`；`_fde_memory_a4_test.mjs` 61/0 |
-| 5 | confidence 规则化推导（模型禁写） | §6 | ✅ 实现 | 已实现+活验 | `dsh-fde-memory/lib/confidence.js`；`_fde_memory_a3_test.mjs` 115/0 |
-| 6 | 审计 L1 本地采集（哈希链 + 脱敏） | §8 | ✅ 实现 | 已实现+活验 | `dsh-fde-memory/lib/session-audit.js`（`redactValue`）、`lib/audit.js`；`_fde_memory_session_audit_test.mjs` 23/0 |
-| 7 | restrict 工具面过滤 | §9.2 | ✅ 实现 | 已实现+活验 | `dsh-fde-phase/lib/restrict.js`；`_restrict_test.mjs` 38/0、`_assert_restrict_live_test.mjs` 176/0 |
+| 1 | deny 检查 D1/D2/D3/D5 四个门禁 | §3 | ✅ 全部实现 | 已实现+活验 | `dsh-fde-phase/lib/check-d2.js`、`check-d5.js`、`guard.js`；`tests/_fde_d2d3_test.mjs` 47/0 |
+| 2 | D3 的 `DraftReference` 铁律 | §4 | ✅ 实现 | 已实现+**部分活验** | `dsh-fde-dsl/lib/`；`tests/_fde_dsl_test.mjs`；活验 phase 链 `seq=119` |
+| 3 | 15 Phase 表 + `current → next(+1)` + 守卫单调否决 | §2/§9.3 | ✅ 实现 | 已实现+活验 | `dsh-fde-phase/lib/phases.js:36-73`；`tests/_fde_phase_test.mjs` 44/0 |
+| 4 | maturity `draft/verified/locked` 单向 + 变更历史 | §4 | ✅ 实现 | 已实现+活验 | `dsh-fde-memory/lib/maturity.js`；`tests/_fde_memory_a4_test.mjs` 61/0 |
+| 5 | confidence 规则化推导（模型禁写） | §6 | ✅ 实现 | 已实现+活验 | `dsh-fde-memory/lib/confidence.js`；`tests/_fde_memory_a3_test.mjs` 115/0 |
+| 6 | 审计 L1 本地采集（哈希链 + 脱敏） | §8 | ✅ 实现 | 已实现+活验 | `dsh-fde-memory/lib/session-audit.js`（`redactValue`）、`lib/audit.js`；`tests/_fde_memory_session_audit_test.mjs` 23/0 |
+| 7 | restrict 工具面过滤 | §9.2 | ✅ 实现 | 已实现+活验 | `dsh-fde-phase/lib/restrict.js`；`tests/_restrict_test.mjs` 38/0、`tests/_assert_restrict_live_test.mjs` 176/0 |
 | 8 | **A1** D4 降 ask + Phase 2 D5-pre | §2/§3/§10.3 | ✅ 实现 | 已实现+活验 | `phases.js:24`；`lib/tools.js` D4 ask / D5-pre ask；链上 `phase-advance-d4-ask:confirmed/rejected` 各 1 |
-| 9 | **A2** 锁残留检测 PID（超时 + PID 死 双条件） | §7 | ✅ 实现 | 已实现+**部分活验** | `dsh-fde-phase/lib/state.js`（`pidAlive`、`timedOut && holderDead`）；`_lock_probe_live.mjs` 12/12 |
-| 10 | **A3** `ctx.approval` 接线（ask 底座） | §9.5 | ✅ 实现 | 已实现+活验 | `dsh-fde-phase/lib/approval.js`、`dsh-fde-memory/lib/approval.js`；`_fde_phase_approval_test.mjs` 12/0 |
-| 11 | **B1** source 防污染 | §7 | ✅ 实现 | 已实现+活验 | `dsh-fde-memory/lib/decisions.js`；`_fde_memory_source_test.mjs` 13/0；活验 `events.jsonl` `seq=169` `source-polluted` |
+| 9 | **A2** 锁残留检测 PID（超时 + PID 死 双条件） | §7 | ✅ 实现 | 已实现+**部分活验** | `dsh-fde-phase/lib/state.js`（`pidAlive`、`timedOut && holderDead`）；`tools/_lock_probe_live.mjs` 12/12 |
+| 10 | **A3** `ctx.approval` 接线（ask 底座） | §9.5 | ✅ 实现 | 已实现+活验 | `dsh-fde-phase/lib/approval.js`、`dsh-fde-memory/lib/approval.js`；`tests/_fde_phase_approval_test.mjs` 12/0 |
+| 11 | **B1** source 防污染 | §7 | ✅ 实现 | 已实现+活验 | `dsh-fde-memory/lib/decisions.js`；`tests/_fde_memory_source_test.mjs` 13/0；活验 `events.jsonl` `seq=169` `source-polluted` |
 | 12 | **B2** R2 逐条确认（一句话理由必填） | §5 | ✅ 实现 | 已实现+活验 | `dsh-fde-memory/lib/tools.js:431-495`（三态，`unavailable` 时 fail-closed）；活验 `seq=99` |
 | 13 | **B3** D5-pre + `compliance.yaml` 写入 | §10.3 | ✅ 实现 | 已实现+活验 | `dsh-fde-phase/lib/compliance-write.js`（tmp+rename 原子写、只覆盖 `data_policy`）；活验 `phase.jsonl:98` |
-| 14 | L0/L1/L2 变更分级（语义载荷判定） | §4 | ✅ 实现 | 已实现+活验 | `dsh-fde-ontology-gate/lib/classify.js`；`_fde_classify_test.mjs` 16/0、`_fde_classify_exec_test.mjs` 3/0 |
-| 15 | **C2** L0/L1/L2 各自流程（变更闭环判定） | §4 | ✅ 实现 | 已实现+活验（真 SDK 层） | `dsh-fde-phase/lib/change-flow.js`；`_fde_c2_test.mjs` 30/0、`_fde_c2_live.mjs` 6/0 |
+| 14 | L0/L1/L2 变更分级（语义载荷判定） | §4 | ✅ 实现 | 已实现+活验 | `dsh-fde-ontology-gate/lib/classify.js`；`tests/_fde_classify_test.mjs` 16/0、`tests/_fde_classify_exec_test.mjs` 3/0 |
+| 15 | **C2** L0/L1/L2 各自流程（变更闭环判定） | §4 | ✅ 实现 | 已实现+活验（真 SDK 层） | `dsh-fde-phase/lib/change-flow.js`；`tests/_fde_c2_test.mjs` 30/0、`tools/_fde_c2_live.mjs` 6/0 |
 | 16 | **C3** 回滚预授权（D5 第 5 键 + 独立通道 + 24h 观察期） | §10.4 | ✅ 实现 | 已实现+活验 | `check-d5.js` 第 5 键、`fde_rollback`、`state.js` `inObservation`；活验 `phase.jsonl:107` |
 | 17 | **E3** schema 迁移失败 ⇒ 降只读 | §7 | ✅ 实现 | 已实现+**部分未验** | `dsh-fde-memory/lib/index.js:147-184`、`lib/tools.js` `assertWritable` |
 | 18 | **E4** 影子模式准确率指标 + `enforce` 准入门 | §12/§14 | ✅ 实现 | 已实现+活验 | `lib/shadow-stats.js`（阈值 `ADMIT_PCT:46`/`OVERTURN_PCT:49`）、`lib/shadow-tools.js` |
@@ -158,7 +158,7 @@
 | **未验部分** | 「`deny` 规则引用了 `maturity: draft` 的属性 ⇒ **必须判失败**」这条铁律本身**没在真环境触发过** |
 | **为什么没验成** | 两个独立原因，**缺一不可**：<br>① 真实本体（`E:\ontologyRoot\`）里**没有任何 `deny` 规则引用未定稿属性**——真数据上这条判据的正确行为就是「通过」，而「通过」分不清「判据跑了但没命中」与「判据根本没跑」；<br>② `fde-run-validation` 的参数面**只有 `reason` 一个**，路径写死读配置里的 `ontologyRoot`，**无法指向临时目录** |
 | **要验需要什么代价** | 必须**改真实业务本体**（往 `logic.yaml` 里加一条引用 draft 属性的 `deny` 规则）。这会**真实推进业务状态**，违反本项目「不为验证而改业务数据」的纪律 |
-| **要不要紧** | 判据逻辑**已在离线套件覆盖**（`_fde_dsl_test.mjs`）。风险是「实现与测试同错」——但该判据是纯结构检查（比对 `maturity` 字段值），同错概率低 |
+| **要不要紧** | 判据逻辑**已在离线套件覆盖**（`tests/_fde_dsl_test.mjs`）。风险是「实现与测试同错」——但该判据是纯结构检查（比对 `maturity` 字段值），同错概率低 |
 
 ### 4.2 A2 锁残留检测 —— 3 个分支验了 2 个
 
@@ -172,8 +172,8 @@
 |---|---|
 | **为什么第 3 个分支没活验** | 强夺**成功**意味着 `writeState` 会真的写 `state.yaml`（改 `current_phase` / `revision` / `updated_at`）——那是**真实业务状态变更**，不可逆 |
 | **活验时怎么保证安全** | ① 只走拒绝分支，`acquireLock` 抛错就根本到不了写盘；② 第二道防线：`mutator` 写成**抛错函数**，万一锁逻辑失效，它在写盘前拦住；③ 审计传 `null`，链上零字节写入；④ 跑前跑后比对 `state.yaml` 的 SHA-256 |
-| **活验结果** | `_lock_probe_live.mjs` **12/12 通过**，`state.yaml` sha 全程 `c1561b6e…` 未变 |
-| **要不要紧** | 三分支里最关键的两个（拒绝类）已活验。强夺分支是「自愈」路径，出错的影响是「错误地接管了锁」——`_fde_phase_test.mjs` 已有反例覆盖 |
+| **活验结果** | `tools/_lock_probe_live.mjs` **12/12 通过**，`state.yaml` sha 全程 `c1561b6e…` 未变 |
+| **要不要紧** | 三分支里最关键的两个（拒绝类）已活验。强夺分支是「自愈」路径，出错的影响是「错误地接管了锁」——`tests/_fde_phase_test.mjs` 已有反例覆盖 |
 
 ### 4.3 E3 迁移失败降只读 —— 调用层未验
 
@@ -225,8 +225,8 @@
 | # | 缺陷 | 根因 | 修复 |
 |---|---|---|---|
 | 1 | 三个插件的 `HarnessError` 结构化错误码**静默丢失** | 写法为 `import * as dshTools` + `dshTools.HarnessError ?? Error`，但真 SDK **不 re-export** `HarnessError`（实测 `=== undefined`）⇒ 永远走 `?? Error` 兜底。**根因是 memory/phase README 里写的「事实」本身有误** | 三插件统一改为从正确来源导入 |
-| 2 | 活体驱动脚本 `_live_drive.mjs` **漏报整个新回合** | `waitSettle` 不设回合基线——续会话时**旧回合的 finish 仍在记录里**，循环第一次轮询就命中并返回，新回合被整个丢掉。**症状与「模型没调工具」完全一样** | 发问前先取基线，只认「新」事件 |
-| 3 | `_fde_d5_test.mjs` 曾是 **0 字节** | 空程序 ⇒ `node` 跑它必然**零断言 + EXIT=0** ⇒ 产物文件里写着 "PASS 9 / FAIL 0" 却**从未真跑过** | 补齐内容；`_run_all_tests.sh` 增加「脚本 <400B 即预警」的检查 |
+| 2 | 活体驱动脚本 `tools/_live_drive.mjs` **漏报整个新回合** | `waitSettle` 不设回合基线——续会话时**旧回合的 finish 仍在记录里**，循环第一次轮询就命中并返回，新回合被整个丢掉。**症状与「模型没调工具」完全一样** | 发问前先取基线，只认「新」事件 |
+| 3 | `tests/_fde_d5_test.mjs` 曾是 **0 字节** | 空程序 ⇒ `node` 跑它必然**零断言 + EXIT=0** ⇒ 产物文件里写着 "PASS 9 / FAIL 0" 却**从未真跑过** | 补齐内容；`tests/_run_all_tests.sh` 增加「脚本 <400B 即预警」的检查 |
 
 ---
 
@@ -234,19 +234,19 @@
 
 ```bash
 # 1) 离线回归（41 套件）
-bash _run_all_tests.sh                  # 期望：ALL-TESTS-GREEN
+bash tests/_run_all_tests.sh                  # 期望：ALL-TESTS-GREEN
 
 # 2) 源 ↔ 部署副本一致性
-node _deploy_diff.mjs                   # 期望：ALL_MATCH
+node tests/_deploy_diff.mjs                   # 期望：ALL_MATCH
 
 # 3) 审计链完整性（按 seq 重放）
-node _replay_phase_audit.mjs            # 期望：断链 0 处 / CHAIN-INTACT
+node tools/_replay_phase_audit.mjs            # 期望：断链 0 处 / CHAIN-INTACT
 
 # 4) 锁的三个分支中的两个（真 projectRoot）
-node _lock_probe_live.mjs               # 期望：12/12，且 state.yaml sha 不变
+node tools/_lock_probe_live.mjs               # 期望：12/12，且 state.yaml sha 不变
 
 # 5) 逐条枚举完成度（不靠 grep 计数）
-node _count_0090_status.mjs             # 期望：活验完整 15 / 部分活验 2 / 部分未验 2 / 合计 19
+node tools/_count_0090_status.mjs             # 期望：活验完整 15 / 部分活验 2 / 部分未验 2 / 合计 19
 ```
 
 > ⚠️ **重放审计链必须按 `seq` 排序，不能按文件行序**——同一毫秒的两个并发写者会分到相邻 `seq`，落盘次序可能被 OS 打乱（实测出现过第 224 行 `seq=223` 排在第 223 行 `seq=224` 之后）。按行序重放会报**假断链**。

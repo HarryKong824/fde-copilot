@@ -13,7 +13,7 @@
 ## 📌 重点信息索引（开发完成后须**原样录入《开发手册》**）
 
 > ✅ **已录入**：《DSH 插件开发手册》正文已写好 ——
-> `C:\Users\DELL\WorkBuddy\2026-09-22-18-30-18\DSH插件开发手册.md`。
+> `DSH插件开发手册.md`（**不在本仓库内**，在交付工作区上一级）。
 > 本索引**八条全部**收入其 §2（含方法论条、`enabled` 条与第 8 条「模型换工具 ≠ 模型拒执行」），
 > 三处翻译产物散落于 §4/§5。第 8 条 → 手册 **§2.8**（2026-09-23 由 AI 补齐，索引"待补"标记已解除）。
 > **此后再有新增硬规则，两边都要更新。**
@@ -103,15 +103,15 @@
 ## 2. 我更新/新建的文件地址
 
 ### 源码工作区（改代码改这里）
-- `C:\Users\DELL\WorkBuddy\2026-09-22-18-30-18\dsh-fde-ontology-gate\lib\paths.js`
+- `dsh-fde-ontology-gate/lib/paths.js`
   — 加 readlinkSync 解析符号链接祖先（§4.1 实证初版与修复版等价，无真实逃逸）+ 修正 `sessionCwdOf` 推测项
-- `C:\Users\DELL\WorkBuddy\2026-09-22-18-30-18\dsh-fde-ontology-gate\README.md`
+- `dsh-fde-ontology-gate/README.md`
   — 诚实清单 #2/#5 更新、挂载配置定稿
-- `C:\Users\DELL\WorkBuddy\2026-09-22-18-30-18\dsh-fde-ontology-gate\VERIFICATION.md`
+- `dsh-fde-ontology-gate/VERIFICATION.md`
   — 新建，5 个 DSH 契约离线核证全表
-- `C:\Users\DELL\WorkBuddy\2026-09-22-18-30-18\_paths_test.mjs`
+- `tests/_paths_test.mjs`
   — 路径回归测试（含符号链接用例；注意本沙箱无符号链接支持，见 §5）
-- `C:\Users\DELL\WorkBuddy\2026-09-22-18-30-18\FDE-Copilot-可行性分析.md`
+- `FDE-Copilot-可行性分析.md`（**不在本仓库内**）
   — 整体可行性报告（多轮修订定稿，含 CVE 版本误判更正）
 
 ### DSH 实际加载的已安装副本
@@ -229,8 +229,8 @@ PoC #1–#5 活验跑完后暴露的**代码缺陷**，两条都影响合规留�
 
 | 脚本 | 覆盖 | 结果 |
 |---|---|---|
-| `_gate_mode_test.mjs` | 缺陷 ①：run_code 在 shadow 下 deny + `modeIndependent=true`；路径规则 shadow 不拦；enforce 拦且不带 modeIndependent；`denyRunCode=false` 放行 | 4/4 ✅ |
-| `_audit_chain_test.mjs` | 缺陷 ②：新链全零起点 → 重载续接 `seq=3`（不回 1）→ 全文件逐条校验**单一连续链** → 尾部残行隔离后 `seq=4` 正确接续 | 4/4 ✅ |
+| `tests/_gate_mode_test.mjs` | 缺陷 ①：run_code 在 shadow 下 deny + `modeIndependent=true`；路径规则 shadow 不拦；enforce 拦且不带 modeIndependent；`denyRunCode=false` 放行 | 4/4 ✅ |
+| `tests/_audit_chain_test.mjs` | 缺陷 ②：新链全零起点 → 重载续接 `seq=3`（不回 1）→ 全文件逐条校验**单一连续链** → 尾部残行隔离后 `seq=4` 正确接续 | 4/4 ✅ |
 
 > 两个脚本是**临时产物**（`.mjs`，需 `@deepseek-ai/dsh-tools` 桩才能 import `guard.js`），
 > 验证完已删除，未进骨架。要复跑需重建工作区根的桩 `node_modules/@deepseek-ai/dsh-tools`
@@ -911,7 +911,7 @@ function shellPathTokens(command) {
 | 1 | 只抠**绝对**路径 | 兜法 ① 额外覆盖**按空白分隔的相对路径**（`"type ..\ontologyRoot\x.md"`） | 相对路径经多基准 resolve 也能落进 ontology，原方案白丢这一类 |
 | 2 | 正则 `[^\s"']*` 截到空白为止 | 改为**锚点取后缀**（截到 token 尾） | `[^\s"']*` 在 `(E:\ontologyRoot\*)` 上会截成 `E:\ontologyRoot\` 这种半截；取后缀则整段保留，通配符/尾括号不影响 `isInside` 判定 |
 
-#### 离线回归（`_shelltok_test.mjs`，工作区根，18/18 通过）
+#### 离线回归（`tests/_shelltok_test.mjs`，工作区根，18/18 通过）
 
 **必须拒绝（11 条）**：裸 token 正/反斜杠、裸根目录、引号内仅路径、
 🔴 `cmd /c "type E:\ontologyRoot\poc-t5.md"`、🔴 嵌套引号、🔴 混中文前缀（无空白）、

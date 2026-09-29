@@ -122,7 +122,7 @@
 
 ---
 
-### P2-3 🟠 **把 `_replay_phase_audit.mjs` 的崩溃改成「明确报告无法判定」**
+### P2-3 🟠 **把 `tools/_replay_phase_audit.mjs` 的崩溃改成「明确报告无法判定」**
 
 | 项 | 内容 |
 |---|---|

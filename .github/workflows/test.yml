@@ -6,8 +6,8 @@
 # ① **跑在 Windows 上**：2026-09-29 实测，同一次提交
 #      · windows-latest → 全绿
 #      · ubuntu-latest  → 41 套里挂 9 套
-#    失败断言指向两处根因方向：`_gate_mode_test.mjs`（**路径语义**）、
-#    `_shelltok_test.mjs`（**shell 分词语义**），其余若干在导入期崩溃。
+#    失败断言指向两处根因方向：`tests/_gate_mode_test.mjs`（**路径语义**）、
+#    `tests/_shelltok_test.mjs`（**shell 分词语义**），其余若干在导入期崩溃。
 #    ⚠️ 本项目**没有**把它改成「Linux 上失败也允许通过」—— 那是假绿。
 #
 # ② **Node 不能低于 22.15**（`package.json` 的 `engines` 同此）。
@@ -15,7 +15,7 @@
 #      · 2 套 —— `zlib.zstdDecompressSync` 在 Node 20 里**不存在**
 #                （实测：20.20.2 无 / 22.15.0 有）
 #      · 4 套 —— 它们**不是离线套件**：要 import 本机**已部署**的插件副本
-#      · 1 套 —— `_fde_memory_decisions_test.mjs` 的**子脚本**写死了作者本机路径
+#      · 1 套 —— `tests/_fde_memory_decisions_test.mjs` 的**子脚本**写死了作者本机路径
 #    ⇒ 前两条分别用「把下界写进 engines」与「明确跳过 + 报条数」解决；第三条已修。
 #    ⚠️ 这里**没有**把 Node 钉在 20 然后放宽判据 —— 那同样是把红的说成绿的。
 # ─────────────────────────────────────────────────────────────────────
@@ -65,11 +65,11 @@ jobs:
           node -v
           bash --version | head -1
           # 本脚本用 GNU 语法的 stat -c；Git Bash 支持，用来提前暴露环境不符
-          stat -c '%s' _run_all_tests.sh
+          stat -c '%s' tests/_run_all_tests.sh
 
       - name: 跑全量回归（此步不作为门禁，理由见文件头 ⚠️）
         shell: bash
-        run: bash _run_all_tests.sh | tee regression.log || true
+        run: bash tests/_run_all_tests.sh | tee regression.log || true
 
       - name: 判定（ALL-TESTS-GREEN + 失败 0 + 跳过数 == 白名单条数）
         shell: bash

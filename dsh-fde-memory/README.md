@@ -159,9 +159,9 @@
 
 | 层 | 证据 | 覆盖 |
 |---|---|---|
-| 离线 | `_fde_memory_e3_test.mjs` **19 断言 / 0 失败**（`_fde_memory_e3_out.txt`） | 单元 + apply 行为 + 三写工具拒/读照常 + 边界 |
-| 变异 | `_fde_memory_e3_mut.mjs` **RED 12 / GREEN 0 / INVALID 0**（`_fde_memory_e3_mut_out.txt`） | 证明上面 19 条**具名断言**真能抓住缺陷（不是恒真） |
-| 真 SDK（隔离） | `_fde_memory_e3_live.mjs` **6 断言 / 0 失败** | 真 `defineTool` 构造成功 + 真 `HarnessError` 的 `instanceof` 与 `code` |
+| 离线 | `tests/_fde_memory_e3_test.mjs` **19 断言 / 0 失败**（`_fde_memory_e3_out.txt`） | 单元 + apply 行为 + 三写工具拒/读照常 + 边界 |
+| 变异 | `tools/_fde_memory_e3_mut.mjs` **RED 12 / GREEN 0 / INVALID 0**（`_fde_memory_e3_mut_out.txt`） | 证明上面 19 条**具名断言**真能抓住缺陷（不是恒真） |
+| 真 SDK（隔离） | `tools/_fde_memory_e3_live.mjs` **6 断言 / 0 失败** | 真 `defineTool` 构造成功 + 真 `HarnessError` 的 `instanceof` 与 `code` |
 | 真数据（只读） | 同上场景 3 | 真 `fde-state/memory/` 树上读得出、写全拒、**前后快照逐字节未变** |
 
 ⚠️ **还差一层**：工具在 **DSH 进程内**注册（`pluginInventory/list` 的 `fiberPhase`）—— 需要重启 DSH，已在差距清单里标注。
@@ -188,7 +188,7 @@
 
 | 导出 | 作用 |
 |---|---|
-| `EXPERIMENTS_SUBDIR = 'experiments'` | ★ 与 gate 部署配置的 `sandboxSubdirs: ['experiments']` 是**同一件事的两处字面量**（跨插件不 import）⇒ `_fde_e2_test.mjs` F1 直接读部署配置对拍 |
+| `EXPERIMENTS_SUBDIR = 'experiments'` | ★ 与 gate 部署配置的 `sandboxSubdirs: ['experiments']` 是**同一件事的两处字面量**（跨插件不 import）⇒ `tests/_fde_e2_test.mjs` F1 直接读部署配置对拍 |
 | `MAX_CONTENT_BYTES = 256 KiB` | 超限**拒**（不截断 —— 截断会让模型拿到"看起来完整"的半份草稿） |
 | `MAX_DEPTH = 4` / `MAX_ENTRIES = 200` | 目录深度与条目数上限（防一次 list 撑爆输出） |
 | `experimentsRootOf(projectRoot)` | `<projectRoot>/experiments` |
@@ -219,13 +219,13 @@ function assertNoSymlinkInside(root, abs) // 从沙箱根之下**逐级** lstatS
 
 | 层 | 证据 | 覆盖 |
 |---|---|---|
-| 离线 | `_fde_e2_test.mjs` **41 断言 / 通过 41 / 失败 0 / EXIT=0**（`_e2_out.txt`） | A 派生面 / B 加载期 fail-closed / C guard 真判定 / D 沙箱边界 / E 隔离 / F 跨包对拍 / G 打印 |
-| 变异 | `_fde_e2_mut.mjs` **红 10 / 绿 0 / 无效 0**（`_e2_mut_out.txt`） | 每条变异被**具名断言**抓住、exit=1、源码 sha256 逐字还原 |
-| 部署 | `_deploy_diff.mjs` **ALL_MATCH**（gate 18 / memory 24 个文件，仅源有 0 / 仅副本有 0 / 内容不一致 0） | 源↔活副本一致 |
+| 离线 | `tests/_fde_e2_test.mjs` **41 断言 / 通过 41 / 失败 0 / EXIT=0**（`_e2_out.txt`） | A 派生面 / B 加载期 fail-closed / C guard 真判定 / D 沙箱边界 / E 隔离 / F 跨包对拍 / G 打印 |
+| 变异 | `tests/_fde_e2_mut.mjs` **红 10 / 绿 0 / 无效 0**（`_e2_mut_out.txt`） | 每条变异被**具名断言**抓住、exit=1、源码 sha256 逐字还原 |
+| 部署 | `tests/_deploy_diff.mjs` **ALL_MATCH**（gate 18 / memory 24 个文件，仅源有 0 / 仅副本有 0 / 内容不一致 0） | 源↔活副本一致 |
 | 活体 | ⏳ **未做** —— 需重启 DSH：期望 `request/header` 工具面**逐名 diff** 恰为 `新增 ["fde_experiment_write","fde_experiment_read","fde_experiment_list"]`，且模型真能写进 `<projectRoot>/experiments/` | 见差距清单 |
 
 ⚠️ **离线套件不 import `lib/config.js`**：它 import `@deepseek-ai/schemastery`，离线工作区无该桩 ⇒
-import 会让整个模块加载失败、报告零产出。`_fde_e2_test.mjs` 因此**手写 cfg**，
+import 会让整个模块加载失败、报告零产出。`tests/_fde_e2_test.mjs` 因此**手写 cfg**，
 代价由 F3（grep 确认 `normalizeConfig` 真调了两个沙箱校验）+ F4（断言手写 cfg 覆盖
 `guard.js`/`paths.js` 读到的每个 `cfg.*`）补。⇒ **补丁过，不是绕过**，但终究不是直接跑真 `config.js`，如实记着。
 
@@ -240,7 +240,7 @@ spec §8 四层里，**L1**（本地采集）见 §1.7；本节是 **L2 outbox �
 | 件 | 文件 | 干什么 |
 |---|---|---|
 | L2 队列 | `lib/outbox.js` | `<projectRoot>/memory/outbox/{seq}.json`；原子写（`.tmp` + rename）；按 **seq 数值**升序重放；投递成功才删；坏条目**不删**、跳过继续 |
-| 跨包契约 | `lib/outbox.js` 的 `state.json` | 降级状态；**写者是本插件、读者还有 phase 的 L4** ⇒ 键名/取值域是跨插件契约，phase 侧有镜像，靠 `_fde_d1_test.mjs` F 组逐字对拍 |
+| 跨包契约 | `lib/outbox.js` 的 `state.json` | 降级状态；**写者是本插件、读者还有 phase 的 L4** ⇒ 键名/取值域是跨插件契约，phase 侧有镜像，靠 `tests/_fde_d1_test.mjs` F 组逐字对拍 |
 | L3 投递 | `lib/telemetry-sink.js` | **只发 POST**（从不 GET、从不解析响应体，只看状态码）；按 seq 升序重放、**一条失败就停**（保序）；`AbortController` 超时 |
 | 降级状态机 | `lib/telemetry-sink.js` | 失败 ⇒ 置 `outageSince`（**只在为空时置位**，中断从第一次失败算起）；中断 ≥ 阈值 ⇒ 写 `telemetry-degraded`；恢复 ⇒ 写 `telemetry-recovered` 带 `pendingReview: N` |
 | L1→L2 接线 | `lib/session-audit.js` | 链写入成功后才 `sink.enqueue({seq, hash, entry})` ⇒ 队列文件名与链上那行**同一个 seq** ⇒ 幂等键天然成立 |
@@ -303,89 +303,89 @@ phase 的 L4 因 `telemetryStatePath` 为空而**根本不适用**（"没配"与
 ```bash
 # A1 套件（config/schema-version/index，68 断言 —— E3 把原「apply 迁移失败 ⇒ throw」
 #         两条旧断言换成三条新契约断言，67 → 68）
-node _fde_memory_test.mjs
+node tests/_fde_memory_test.mjs
 
 # A2 套件（confidence/decisions/照抄件跨包等价 + §2 三条补丁，47 断言）
-node _fde_memory_decisions_test.mjs
+node tests/_fde_memory_decisions_test.mjs
 
 # A3 套件（assertPhaseId 双向 + readDecision 双向断言 + listDecisions {items,bad}
 #         + confidence psr 校验 + maturity 单向规则 + change_log 顺序 + checklist/stakeholders 基础
 #         + §3.2 readRecentChanges {items,bad} + §3.4 maturity 非法 status fail-closed，115 断言）
-node _fde_memory_a3_test.mjs
+node tests/_fde_memory_a3_test.mjs
 
 # A4 套件（notes 6 API + §4.2 四组双向过期 + §6.5 confidence 不可写 + §6.6 expires_at 不可写
 #         + §6.7 slug 路径穿越 + readNote fail-closed + listNotes bad + reviewNote 原子写
 #         + §2 三条修（todayLocal 本机时区 / isExpired 双向 / assertNoteFile 双向），61 断言）
-node _fde_memory_a4_test.mjs
+node tests/_fde_memory_a4_test.mjs
 
 # A5 套件（六层各一条命中 + [L5] 封顶 10 + [L6] 封顶 20 + confidence 不可写
 #         + 过期注记双向 + 复核后不进 [L6] + readCurrentPhase，33 断言）
-node _fde_memory_a5_test.mjs
+node tests/_fde_memory_a5_test.mjs
 
 # import 覆盖套件（lib/*.js 除 index.js 自身与例外名单外都必须在 index.js import 图上
 #         + 坏样本自证：去掉豁免必须红，11 断言）
-node _fde_memory_import_cover_test.mjs
+node tests/_fde_memory_import_cover_test.mjs
 
 # 审计 L1 套件（0077：脱敏真阳性 + 监听器不阻塞 + assistant/chunk 过滤 + 链完整性，23 断言）
-node _fde_memory_session_audit_test.mjs
+node tests/_fde_memory_session_audit_test.mjs
 
 # B1/B2 套件（source 防污染 5+3 断言 + confirm 工具三态 5 断言 + 退出码敏感，13 断言）
-node _fde_memory_source_test.mjs
+node tests/_fde_memory_source_test.mjs
 
 # E3 套件（迁移失败降只读，19 断言）：apply 不抛错 / 全部工具仍注册 / 审计落 schema-readonly
 #         / 三个写工具拒 + 读工具照常 / 非只读与三参调用兼容 / 退出码敏感
 #         ⚠️ E2 起「全部工具」从 tools.js 的导出常量算，不写死数字（原为 4 个硬编码名字）
-node _fde_memory_e3_test.mjs
+node tests/_fde_memory_e3_test.mjs
 
 # E3 变异注入（12 条语义变异必须**全部**被具名断言抓住；GREEN 或 INVALID 都判非 0）
-node _fde_memory_e3_mut.mjs
+node tools/_fde_memory_e3_mut.mjs
 
 # E3 真 SDK 活验（真 defineTool 构造 + 真 HarnessError instanceof + 真 memory/ 树只读零污染，6 断言）
-node _fde_memory_e3_live.mjs
+node tools/_fde_memory_e3_live.mjs
 
 # E2 套件（探索沙箱 spec §7，41 断言）：A 派生面 / B 加载期 fail-closed / C guard 真判定
 #         / D 沙箱边界（含 .. 段、符号链接、大小上限）/ E 不进注入（逐字不变 + [L5] 双向）
 #         / F 跨包字面量对拍（部署配置的 sandboxSubdirs / protectedExtraRoots[0]）/ G 打印双向
 #         ⚠️ 它**不 import gate 的 config.js**（schemastery 无桩）⇒ 手写 cfg，代价由 F3/F4 补
-node _fde_e2_test.mjs
+node tests/_fde_e2_test.mjs
 
 # E2 变异注入（10 条语义变异必须**全部**被具名断言抓住；GREEN 或 INVALID 都判非 0）
 #         目标是**工作区源码**（套件 import 的就是它）⇒ 收尾按 sha256 逐字核对还原
-node _fde_e2_mut.mjs
+node tests/_fde_e2_mut.mjs
 
 # D1 套件（审计外置 L2/L3 + 离线降级 + phase 侧 L4 判据，**跨包**，107 断言）
 #         A L2 队列（含"按数值升序而非字典序"的反例）/ B state.json 契约（缺席四档分开报）
 #         / C evaluateRemote 三档 + 两处边界 / D L3 投递（只写端点、坏条目不删、一条失败就停、
 #         降级与恢复留痕、重启重放）/ E phase L4 判据（含"不适用时不拦"的反例）
 #         / F 跨包字面量 + `evaluateRemote` 逐例同解 / G 回执呈现面 / H config 校验
-node _fde_d1_test.mjs
+node tests/_fde_d1_test.mjs
 
 # D1 变异注入（26 条语义变异必须**全部**被具名断言抓住；GREEN 或 INVALID 都判非 0）
 #         ⚠️ 与前几个变异套件**不同**：本套件改的是**沙箱副本**（`_mut/d1/`），真源码一次都不碰
-node _fde_d1_mut.mjs
+node tests/_fde_d1_mut.mjs
 
 # 🔴 D1 **活体验证**（第六层：前五层证明"给定输入算得对"，这一层证明"在真 DSH 里接线接上了"）
 #     分步执行，每步把证据**追加**到 `_fde_d1_live_out.txt`（不覆盖上一轮）：
-node _fde_d1_live.mjs dry     # 不碰 DSH：配置补丁在 **YAML 解析层面**校验落在对的插件 config 里（15/15）
-node _fde_d1_live.mjs probe   # 只读勘察：跑着的 DSH 里有没有这次的代码、outbox/state.json 该不该在
-node _fde_d1_live.mjs live    # ✅ **交付态活验**（只读，不改配置不重启）：代码装上了吗 / 未配端点分支对吗 /
+node tools/_fde_d1_live.mjs dry     # 不碰 DSH：配置补丁在 **YAML 解析层面**校验落在对的插件 config 里（15/15）
+node tools/_fde_d1_live.mjs probe   # 只读勘察：跑着的 DSH 里有没有这次的代码、outbox/state.json 该不该在
+node tools/_fde_d1_live.mjs live    # ✅ **交付态活验**（只读，不改配置不重启）：代码装上了吗 / 未配端点分支对吗 /
                               #    L4 的「本地链完整」真算一遍 / 四个 fde 插件还 active 吗。17/17
-node _fde_d1_live.mjs prep    # ⚠️ **会重启 DSH**：备份配置 → 打补丁 → 起桩(3099) → 重启
-node _fde_d1_live.mjs v1      # 心跳投递 ⇒ state.json present（顺带验 Bearer 头、URL、POST 方法）
-node _fde_d1_live.mjs ev      # 造一条会话事件（`session/create`）—— **不碰任何已有会话**
-node _fde_d1_live.mjs v2      # 入队 → 投递 → 删净；链上 seq 与投递的 seq/hash 对得上
-node _fde_d1_live.mjs out     # 桩切 fail + 造事件（**阈值 4s，故意不达阈值**）
-node _fde_d1_live.mjs v3      # 未达阈值 ⇒ L4 判 **missing**（不许提前降级）
-node _fde_d1_live.mjs down    # 等到超阈值
-node _fde_d1_live.mjs v4      # 超阈值 ⇒ L4 判 **degraded** + 链上有 telemetry-degraded
-node _fde_d1_live.mjs rec     # 桩切 ok
-node _fde_d1_live.mjs v5      # 补传：队列投净 + telemetry-recovered（带 pendingReview）
-node _fde_d1_live.mjs restore # ⚠️ **会重启 DSH**：还原配置 → 杀桩 → 重启（**收尾必跑**）
-#     桩本体：`_fde_d1_stub.mjs`（只写端点仿真，端口 3099，日志 `_d1_live_stub.jsonl`）
+node tools/_fde_d1_live.mjs prep    # ⚠️ **会重启 DSH**：备份配置 → 打补丁 → 起桩(3099) → 重启
+node tools/_fde_d1_live.mjs v1      # 心跳投递 ⇒ state.json present（顺带验 Bearer 头、URL、POST 方法）
+node tools/_fde_d1_live.mjs ev      # 造一条会话事件（`session/create`）—— **不碰任何已有会话**
+node tools/_fde_d1_live.mjs v2      # 入队 → 投递 → 删净；链上 seq 与投递的 seq/hash 对得上
+node tools/_fde_d1_live.mjs out     # 桩切 fail + 造事件（**阈值 4s，故意不达阈值**）
+node tools/_fde_d1_live.mjs v3      # 未达阈值 ⇒ L4 判 **missing**（不许提前降级）
+node tools/_fde_d1_live.mjs down    # 等到超阈值
+node tools/_fde_d1_live.mjs v4      # 超阈值 ⇒ L4 判 **degraded** + 链上有 telemetry-degraded
+node tools/_fde_d1_live.mjs rec     # 桩切 ok
+node tools/_fde_d1_live.mjs v5      # 补传：队列投净 + telemetry-recovered（带 pendingReview）
+node tools/_fde_d1_live.mjs restore # ⚠️ **会重启 DSH**：还原配置 → 杀桩 → 重启（**收尾必跑**）
+#     桩本体：`tools/_fde_d1_stub.mjs`（只写端点仿真，端口 3099，日志 `_d1_live_stub.jsonl`）
 #     ⚠️ `prep` / `restore` 会 kill 运行中的 DSH 并改 `cordis.patch.yml` ⇒ 这两步需要**用户授权**
 #     ⚠️ `prep`–`v5`–`restore` 这**一整条端到端**在 PoC 内**没有跑过**（需两次重启）；`live` 是交付态那一层。
 #
-# 诊断：`_fde_d1_chain_diag.mjs` / `_fde_d1_chain_diag2.mjs`（**只读**）
+# 诊断：`tools/_fde_d1_chain_diag.mjs` / `tools/_fde_d1_chain_diag2.mjs`（**只读**）
 #     它们是 `live-C1` 报出 3 处假断链时写的二诊工具，`diag2` 是**判定"按 seq 重放 ⇒ 断链 0"**的那一次。
 #     **刻意保留**：§12.6 第 5、6 条的结论都由它们产生，删掉就没有可复算的证据（见 `deletion-needs-reference-check`：
 #     删除前先查引用 —— 这两份**被本节引用**，故一律不删）。不改任何文件，可随时重跑。
@@ -394,7 +394,7 @@ node _fde_d1_live.mjs restore # ⚠️ **会重启 DSH**：还原配置 → 杀�
 node dsh-fde-memory/precheck.mjs
 
 # 验 exit code 敏感（FDE_INVERT=1 时套件必红，确认真的会非 0）
-$env:FDE_INVERT='1'; node _fde_memory_a5_test.mjs; echo $LASTEXITCODE
+$env:FDE_INVERT='1'; node tests/_fde_memory_a5_test.mjs; echo $LASTEXITCODE
 ```
 退出码 0 = 全绿；非 0 = 有失败。
 
@@ -410,7 +410,7 @@ $env:FDE_INVERT='1'; node _fde_memory_a5_test.mjs; echo $LASTEXITCODE
 - §6.11 SRC_SHA 哨兵（源件变 ⇒ 提示不判红）
 - §6.12 exit code 敏感（FDE_INVERT=1 必红）
 - §6.14 不动既有状态（A2 全程临时目录，不接触真实部署）
-- §6.13 / §6.15 由 `_deploy_diff.mjs` 和真活验负责
+- §6.13 / §6.15 由 `tests/_deploy_diff.mjs` 和真活验负责
 - **0082 §2.2 新断言**：`listDecisions bad 数量=0`（坏文件不存在的正向情况）
 
 **A3 套件覆盖**（0082 §3.3 + §5 验证表）：
@@ -477,28 +477,28 @@ $env:FDE_INVERT='1'; node _fde_memory_a5_test.mjs; echo $LASTEXITCODE
     那个名字就**读写都用不了**。理由：分段校验（拒 `..` / 绝对路径 / 空段）挡不住"沙箱内一个软链接指向 `memory/`"这条路径，
     而逐级 `lstat` 能挡 ⇒ 在"少一个合法用法"与"多一条逃逸路径"之间选前者。**PoC 内没有真实用户会用软链接组织草稿**，但这是**行为约束**，要写进交付说明。
 37. **E2 §2**：**链上没有沙箱记录是设计，不是审计坏了**（spec §7 第 4 条"沙箱内容无审计要求"）。
-    沙箱的写/读/列**都不落 `memory/audit/events.jsonl`** —— 已由 `_fde_e2_test.mjs` 的 D9 用**真审计链核字节数前后不变**钉住，变异 M7（给沙箱写入加一条 `audit.record`）会红。
+    沙箱的写/读/列**都不落 `memory/audit/events.jsonl`** —— 已由 `tests/_fde_e2_test.mjs` 的 D9 用**真审计链核字节数前后不变**钉住，变异 M7（给沙箱写入加一条 `audit.record`）会红。
     ⚠️ 危害方向与一般缺口相反：**它是"少记了"，而读者最容易反过来读** —— 排查时若按"链上没有 ⇒ 写入没发生"推理，会得出**沙箱根本没被用过**的结论（错，沙箱本来就不记）。这条必须写在交付说明里，否则会变成一次误判。
 38. **E2 §3**：沙箱**不参与 D1/D3 校验**是**结构性**的（spec §7 第 2 条），不是"我们没写代码去读它"：
     dsl 的 `ONTOLOGY_FILES` 用 `join(ontologyRoot, <固定文件名>)` **逐个文件读**（不枚举目录），
-    而沙箱位于 `protectedExtraRoots[0]` 之下、与 `ontologyRoot` **无交集** ⇒ 结构上到不了。证明见 `_fde_e2_test.mjs` E4/E5。
-39. **E2 §4**：沙箱**不进分层注入**（spec §7 第 1 条）用"逐字不变"来证：`_fde_e2_test.mjs` E2 断言
+    而沙箱位于 `protectedExtraRoots[0]` 之下、与 `ontologyRoot` **无交集** ⇒ 结构上到不了。证明见 `tests/_fde_e2_test.mjs` E4/E5。
+39. **E2 §4**：沙箱**不进分层注入**（spec §7 第 1 条）用"逐字不变"来证：`tests/_fde_e2_test.mjs` E2 断言
     在沙箱里放内容前后，`fde_memory_context` 的输出**逐字不变**；E3 用 `[L5] notes` 这个**真的会显示文件名的观测点**做**双向**断言
     （同一份 note 放进 `memory/notes/` ⇒ 立刻显示；放进沙箱 ⇒ 不显示）。⚠️ 反向对照不可省 ——
     否则"沙箱里的不显示"可能只是因为**那条注入路本来就是死的**（这是恒真判据的经典形态，实测踩过一次）。
-40. **E2 §5**：`_fde_e2_test.mjs` **不 import `lib/config.js`**（它 import `@deepseek-ai/schemastery`，离线工作区无该桩
+40. **E2 §5**：`tests/_fde_e2_test.mjs` **不 import `lib/config.js`**（它 import `@deepseek-ai/schemastery`，离线工作区无该桩
     ⇒ 整个模块加载失败、报告零产出），改为**手写 cfg**。代价由 F3（grep 确认 `normalizeConfig` 真调了两个沙箱校验）+ F4
     （断言手写 cfg 覆盖 `guard.js`/`paths.js` 读到的每个 `cfg.*`）补 —— **补丁过，不是绕过**，
     但终究不是直接跑真 `config.js`，如实记（§11.5；gate README 同款）。
 
-41. **D1 §1（诚实边界，spec §8 原文）**：**降级模式降低审计保证强度**，不是"和正常一样安全"。spec 原文要求把这条写进交付 —— 所以：① 本 README 这一条；② `lib/telemetry-sink.js` 头注释；③ phase 的**回执正文**（`degraded: true` 时打印那段中文说明，见 `_fde_d1_test.mjs` G1/G1b）。**三处都有**，不是"文档里写了"。降级期间的通过**记在 phase 的审计链上**（`degraded: true`），可事后按窗口筛出来复核。
+41. **D1 §1（诚实边界，spec §8 原文）**：**降级模式降低审计保证强度**，不是"和正常一样安全"。spec 原文要求把这条写进交付 —— 所以：① 本 README 这一条；② `lib/telemetry-sink.js` 头注释；③ phase 的**回执正文**（`degraded: true` 时打印那段中文说明，见 `tests/_fde_d1_test.mjs` G1/G1b）。**三处都有**，不是"文档里写了"。降级期间的通过**记在 phase 的审计链上**（`degraded: true`），可事后按窗口筛出来复核。
 42. **D1 §2**：**没有跑通对真实远端端点的投递**。spec §8 的 L3 端点需要真服务账号与写凭据，PoC 内不存在 ⇒ 离线套件用**注入的 `fetchImpl`**（`deps.fetchImpl`）覆盖成功/失败/超时/坏响应四条路径，活验用一个**本地桩端点**。⚠️ 由此产生一条真实缺口：**真实端的鉴权/重试/幂等语义（例如 409 重复、429 限流）从未被验证过** —— 本实现「只看状态码、非 2xx 一律算失败」，遇到 429 会当失败并开始降级计时。这是**已知的有意简化**，不是 bug。
 43. **D1 §3**：`telemetry-sink.js` 的定时器是 `setInterval(...).unref()` ⇒ **它不会阻止进程退出**（正确），但也意味着**进程被 SIGKILL 时最后一次 drain 不会跑**（`dispose()` 里的收尾只在正常拆卸路径上）。⇒ 队列里最多留一批未投递条目，由**下次 apply 重放**兜住。
 44. **D1 §4**：`state.json` 的**单写者假设是"同一时刻只有一个 memory 插件实例在写同一个 `projectRoot`"**。多进程/多实例（例如两个 DSH 进程指同一个 `fde-state`）会**互相覆盖** `outageSince`/`degradedDelivered`，而**两边都不会报错**。PoC 单进程内成立；这条**没有机制保证**，靠部署纪律。
 45. **D1 §5：第六层（活体验证）—— 交付态已活验、端到端未验**（2026-09-29）。
-    **第一层（离线）**：`_fde_d1_test.mjs` 107/107、`_fde_d1_mut.mjs` 红 26/绿 0/无效 0、
-    `_deploy_diff.mjs` 双方 ALL_MATCH、`_run_all_tests.sh` 41 套件 ALL-TESTS-GREEN。
-    **交付态活验：已做，`node _fde_d1_live.mjs live` 17/17 全绿**（用户手动重启 DSH 后跑的，**纯只读**）。
+    **第一层（离线）**：`tests/_fde_d1_test.mjs` 107/107、`tests/_fde_d1_mut.mjs` 红 26/绿 0/无效 0、
+    `tests/_deploy_diff.mjs` 双方 ALL_MATCH、`tests/_run_all_tests.sh` 41 套件 ALL-TESTS-GREEN。
+    **交付态活验：已做，`node tools/_fde_d1_live.mjs live` 17/17 全绿**（用户手动重启 DSH 后跑的，**纯只读**）。
     它证明的是"新代码在真进程里装上了、且在**未配端点**这一交付态下行为正确"：
     - `live-A1/A2/A3`：真进程写出了 `telemetry-disabled`（`seq=433`，在链尾窗口内），
       且链上 `telemetry-*` 记录**只有这一种** —— 即 `installTelemetrySink` 真的被 apply 调用了
@@ -526,7 +526,7 @@ $env:FDE_INVERT='1'; node _fde_memory_a5_test.mjs; echo $LASTEXITCODE
 - 🔴 **E3（2026-09-29）修正这条的**作用域**：fail-closed 指的是**写** fail-closed，**不是"整个插件不加载"**。
   - 旧实现（A1 起）：`status === 'failed'` ⇒ `apply()` `throw` ⇒ fiber failed ⇒ 包括**读**在内全没了。
   - 现实现：保留读、只封三个写工具，并在审计/日志里明说降级（§1.9）。spec 第七节原文见 §1.9 引文。
-  - **判据（可复算）**：迁移失败时 `fde_memory_context` 仍返回内容，三个写工具抛 `MEMORY_SCHEMA_READ_ONLY`；`apply()` 不抛错且**全部工具**注册。见 `_fde_memory_e3_test.mjs` §2/§3。
+  - **判据（可复算）**：迁移失败时 `fde_memory_context` 仍返回内容，三个写工具抛 `MEMORY_SCHEMA_READ_ONLY`；`apply()` 不抛错且**全部工具**注册。见 `tests/_fde_memory_e3_test.mjs` §2/§3。
 
 ## 5. A2 设计决策与理由（0079 §2-§4）
 
@@ -644,7 +644,7 @@ $env:FDE_INVERT='1'; node _fde_memory_a5_test.mjs; echo $LASTEXITCODE
 
 ### 9.4 链完整性判据（§2.3③）
 - 用**自己的** `prevHash`+`hash` 链判完整，**绝不用** session 事件 `seq` 连续 —— 事件 seq 缺口是常态，用它判会造出永远为红的假告警
-- 重放脚本 `_replay_memory_audit.mjs`：逐行校验 seq 单调无重号 + `hash == linkHash(prevHash, 去掉 prevHash/hash 的 record)` + `prevHash == 上一条 hash`（首条 `prevHash == GENESIS`）
+- 重放脚本 `tools/_replay_memory_audit.mjs`：逐行校验 seq 单调无重号 + `hash == linkHash(prevHash, 去掉 prevHash/hash 的 record)` + `prevHash == 上一条 hash`（首条 `prevHash == GENESIS`）
 
 ### 9.5 复用 lib/audit.js（不新建第二份）
 - `session-audit.js` 直接 import `lib/audit.js` 的 `AuditChain`（同包内），不照抄第二份链实现
@@ -679,7 +679,7 @@ $env:FDE_INVERT='1'; node _fde_memory_a5_test.mjs; echo $LASTEXITCODE
 
 ### 10.4 测试夹具的两个形状要求（吃过亏，写下来）
 - **登记序 = 输出序**：异步用例各自往自己的**槽位**写结果，收尾统一渲染。第一版用 `lines.push` 直接追，结果 `sleep(80)` 的用例落到输出后半段、`[场景 3]` 的标题跑到用例前面 —— 读的人会以为那条用例属于上一节。**能靠输出形状解决的，别靠读者的注意力。**
-- **`out.txt` 必须非空且有 `RESULT:` 行**：本项目有过一次 `_fde_d5_test.mjs` 是 **0 字节**却留下 `PASS 9 / FAIL 0` 产物的事故（`node` 跑空程序必然零断言 + exit 0）。判定"跑过"要三件套：脚本字节数（`ls -la`）+ 当场重跑 + 退出码。变异脚本里判 `crashed = out.txt 里没有 RESULT 行` 就是这条纪律的落地。
+- **`out.txt` 必须非空且有 `RESULT:` 行**：本项目有过一次 `tests/_fde_d5_test.mjs` 是 **0 字节**却留下 `PASS 9 / FAIL 0` 产物的事故（`node` 跑空程序必然零断言 + exit 0）。判定"跑过"要三件套：脚本字节数（`ls -la`）+ 当场重跑 + 退出码。变异脚本里判 `crashed = out.txt 里没有 RESULT 行` 就是这条纪律的落地。
 
 ### 10.5 "零污染"要用快照**自证**，不能靠声称
 - 场景 3 在**真 `memory/` 树**上跑：读 + 被拒的写。为了证明"一字未改"不是口头承诺，脚本对真目录树做**前后递归快照**（相对路径 → `size:mtimeMs`）并逐项对比，输出里打印文件数与结论。
@@ -716,29 +716,29 @@ $env:FDE_INVERT='1'; node _fde_memory_a5_test.mjs; echo $LASTEXITCODE
 - ⇒ 判据改成**可观测的输出**：`fde_memory_context` 的输出在沙箱塞入内容前后**逐字不变**（E2）。
 - ⚠️ **但"不变"单独一条也是恒真的**（若那条注入路本来就是死的，两边都是空 ⇒ 永远绿）。
   ⇒ 必须配**正面对照**：同一份 note 放进 `memory/notes/` 会**立刻**在 `[L5]` 里显示（E3）。
-  这是本项目记过的恒真判据形态（§10.4 的 `_fde_d5_test.mjs` 0 字节事故、以及一次 `[E3]` 原写法的失败），
+  这是本项目记过的恒真判据形态（§10.4 的 `tests/_fde_d5_test.mjs` 0 字节事故、以及一次 `[E3]` 原写法的失败），
   所以对照**不是可选补充**，是这条判据成立的前提。
 
 ### 11.5 离线套件不 import `config.js` —— 代价与补丁（跨包同款，两边都记）
 - `config.js` import `@deepseek-ai/schemastery`，离线工作区只有 `dsh-tools` / `dsh-llm` 两个桩 ⇒
   import 它会让**整个模块加载失败、报告零产出**（第一次跑就撞上：`ERR_MODULE_NOT_FOUND`）。
-- **处置**：`_fde_e2_test.mjs` 手写 `makeGateCfg()`，并补两条断言把这个代价**封住**：
+- **处置**：`tests/_fde_e2_test.mjs` 手写 `makeGateCfg()`，并补两条断言把这个代价**封住**：
   **F3** grep `config.js` 确认 `normalizeConfig` 真的调了两个沙箱校验（M9 可证伪）；
   **F4** 断言手写 cfg 覆盖 `guard.js` / `paths.js` 读到的**每一个** `cfg.*` 字段。
 - ⇒ 这是"**补丁过的**"而不是"绕过去的"；但它终究不是直接跑真 `config.js`，所以写进诚实清单（§3 条目 40）。
 
 ### 11.6 一条刻意的测试修法（"旧断言指控正确实现"的实例，记下来）
-- E2 加了 3 个工具后，**两个既存套件**（`_fde_memory_test.mjs` / `_fde_memory_e3_test.mjs`）的
+- E2 加了 3 个工具后，**两个既存套件**（`tests/_fde_memory_test.mjs` / `tests/_fde_memory_e3_test.mjs`）的
   「迁移失败时**四个工具**全部注册」把**正确实现**判成了红的（实测 PASS 65 / FAIL 2）。
 - 最省事的"修法"是把沙箱工具摘掉 ⇒ 灯变绿、缺陷回来。**没这么做**：
   改成从 `tools.js` 的**导出常量**派生期望清单 —— 加工具自动跟上，缺注册仍判红。
-- 同批还修了 `_fde_memory_import_cover_test.mjs`：新文件 `experiments.js` 由 `tools.js` import
+- 同批还修了 `tests/_fde_memory_import_cover_test.mjs`：新文件 `experiments.js` 由 `tools.js` import
   （`index.js` 不直接用它的导出）⇒ 旧判据"必须在 **index.js** 的 import 上"判它缺失。
   改成沿 `from './x'` **递归**收集可达集 —— 并**保留坏样本**（`config-schema.js` 去掉豁免仍必须红，
   它走动态 `import()`，递归只跟静态两式）⇒ **是手段升级，不是放宽**。
 
 ### 11.7 一处**间歇红**被当成缺陷处理（而不是当噪声忽略）
-- `_fde_memory_e3_test.mjs` 的 `schema-readonly` 断言单跑出现过一次 `types=[]`，紧接着连跑 6 次全不复现。
+- `tests/_fde_memory_e3_test.mjs` 的 `schema-readonly` 断言单跑出现过一次 `types=[]`，紧接着连跑 6 次全不复现。
 - 根因：`audit.record` 是 **fire-and-forget**，测试用固定 `sleep(80)` 等它 —— 机器一慢就读不到。
 - ⇒ 改成 `waitForAudit(dir, pred, 3000)` **轮询**（出现即返回，超时也返回、由断言判红，函数自己不抛）。
 - **为什么值得单独记**：间歇红比稳定红更危险 —— 它会被当成噪声重跑掉，而它下一次出现的场合是
@@ -759,7 +759,7 @@ spec §8 的 L3 写的是「**自定义 TelemetryBackend** → HTTP(S) 只写端
 ### 12.2 阈值只有一个真源，且**写进文件**而不是缓存成布尔
 「进入降级」由**时长**决定，而 **24h 那一刻没有任何写入动作** ⇒ 任何"在切换时翻一个标志位"的写法都必然过期
 （读者会在阈值刚过时仍看到旧值，直到下一次投递失败）。⇒ 把 `degradeAfterMs` 存进 `state.json`（写者是 memory），
-phase 侧**每次现算**。两侧的 `evaluateRemote` 必须同解 ⇒ 由 `_fde_d1_test.mjs` 的 F 组**逐例对拍**（20 组输入），
+phase 侧**每次现算**。两侧的 `evaluateRemote` 必须同解 ⇒ 由 `tests/_fde_d1_test.mjs` 的 F 组**逐例对拍**（20 组输入），
 变异 M23（只改 phase 一侧的 `>=`）会红。
 
 ### 12.3 「没配」与「读不到」必须分开（否则复现 spec 要修的那个死锁）
@@ -781,17 +781,17 @@ phase 侧**每次现算**。两侧的 `evaluateRemote` 必须同解 ⇒ 由 `_fd
 ### 12.5 变异套件改用**沙箱副本**（与既有 6 个变异套件的唯一不同）
 既有做法 = 备份真源码 → 就地改 → 跑 → `finally` 还原 → 核 sha。每一步都对，但有一个**不对称的风险**：
 进程被强杀（Ctrl-C / OOM / 断电）会**把生产源码留在变异态**，而它唯一的保障是"下次有人来核 sha"。
-⇒ `_fde_d1_mut.mjs` 改在 `_mut/d1/` 的副本上注入，真源码**一次都不碰**；
+⇒ `tests/_fde_d1_mut.mjs` 改在 `_mut/d1/` 的副本上注入，真源码**一次都不碰**；
 收尾核 7 个文件的 sha256 是用来**证明**这一点（不是补救），且最后 **reseed 一次让沙箱 ≡ 源**
 （否则沙箱留在最后一条变异的状态里，将来有人 grep 到它，会以为自己看到的是源码）。
 
 ### 12.6 七个"仪器自己会撒谎"的形状（前两个在离线套件，后五个在活验仪器；每一个都当场栽了一次）
-1. **裸取下标 ⇒ 崩溃 ⇒ 整份报告消失**。`_fde_d1_test.mjs` 里 `rec[0].pendingReview` 在记录缺席时会**抛**，
+1. **裸取下标 ⇒ 崩溃 ⇒ 整份报告消失**。`tests/_fde_d1_test.mjs` 里 `rec[0].pendingReview` 在记录缺席时会**抛**，
    于是变异 M16（D9 不留痕）一开始被判成"崩溃"而**不是**"断言红" —— 崩溃与"没通过"看起来一模一样。
    ⇒ 测试里所有嵌套读取改走 `at(obj, ...path)` 安全读，并**先断言"那条记录存在"**再读它的字段。
 2. **锚点缩进是抄来的，不是估的**。变异 M24 的 `from` 我写成 4 空格（真源码是 2 空格）⇒ 锚点 0 次命中，
    变异套件正确判成"无效变异"。**这不是坏消息**：无效变异被单独记一档（不算红也不算绿）恰恰是它该有的行为。
-3. 🔴 **`readJson(p)` 读的是文件，我却把「一行文本」当路径传了进去**（`_fde_d1_live.mjs` 第一版）。
+3. 🔴 **`readJson(p)` 读的是文件，我却把「一行文本」当路径传了进去**（`tools/_fde_d1_live.mjs` 第一版）。
    于是每一行都 `ENOENT` ⇒ `chainEvents()` 报「432 行，**坏行 432**」，而 `telemetry-*` 计数是 0。
    **危害方向**：所有"链上有 X"的断言都会红，而它长得**完全像"实现没做到"** ——
    若没跑 `probe` 就直接开 `prep` 验，我会拿着一张全红的报告去改**正确**的实现。
@@ -802,7 +802,7 @@ phase 侧**每次现算**。两侧的 `evaluateRemote` 必须同解 ⇒ 由 `_fd
    第一次写 `:298/:227/:216-225`，实测已是 `:301/:230/:219-230`，**三个数全错**。
    ⇒ 口径改成：**指符号名（可 grep）＋ 行号并标明"写入时在 `:N`"**，且**在最后一次编辑之后再统一校准一次**。
    （行号只会相对某一版有效 —— 跨文档引用更要把"哪一份、哪一版"写出来。）
-5. 🔴 **按「文件行序」重放哈希链，会在一处**真**错位上报出 3 处**假**断链**（`_fde_d1_live.mjs` 的 `live` 命令第一版）。
+5. 🔴 **按「文件行序」重放哈希链，会在一处**真**错位上报出 3 处**假**断链**（`tools/_fde_d1_live.mjs` 的 `live` 命令第一版）。
    实测 `memory/audit/events.jsonl` 第 224 行的 `seq=223` 排在第 223 行 `seq=224` **之后** ——
    两个写者并发分配到相邻 seq（同一毫秒的 `memory-confirm` 与 `session-event`），落盘次序被 OS 打乱。
    按行序重放报「断链 3、哈希不符 3」；**按 `seq` 升序重放：断链 0、哈希不符 0**，且 seq 无重号无缺号。
@@ -815,10 +815,10 @@ phase 侧**每次现算**。两侧的 `evaluateRemote` 必须同解 ⇒ 由 `_fd
    另有一条真性质值得记：**`#restoreFromTail` 取的是"文件最后一行"的 hash**，所以"末行 hash == 链尾 head"
    是重启后能续上链的必要条件 —— 已作为 `live-C5` 单独断言。
    （本链恰好是**错位处不在尾部**，所以没造成后果；若是最大 seq 那一条先落盘后又被后写者覆盖……见 `dsh-audit-chain-fork-trap`。）
-6. ⚠️ **"行序 ≠ seq 序"这条事实，第一版诊断脚本自己也差点读错**：`_fde_d1_chain_diag.mjs` 按行序打印
+6. ⚠️ **"行序 ≠ seq 序"这条事实，第一版诊断脚本自己也差点读错**：`tools/_fde_d1_chain_diag.mjs` 按行序打印
    "坏行的前一行 / 后一行"，于是把 `seq=223` 打印在 `seq=224` 后面，看起来像**两条记录内容都一样、互相矛盾**。
    ⇒ 诊断脚本**也必须锚 `seq`**，不能锚行号；行号只作"这一条在文件里排第几"的参考坐标。
-7. 🔴 **措辞写对了、判据写窄了：「只有这一种」被实现成「恰好一条」**（`_fde_d1_live.mjs` 的 `live-A2`）。
+7. 🔴 **措辞写对了、判据写窄了：「只有这一种」被实现成「恰好一条」**（`tools/_fde_d1_live.mjs` 的 `live-A2`）。
    我的注释写的是"**只有配置为「未配端点」才会写它**"，判据却写成
    `tele.map(r => r.type)` **深等于** `['telemetry-disabled']` —— 于是：
    该记录**每 apply 一次就写一条**，用户重启第二次后链上变成 2 条 ⇒ **判据当场假红**。

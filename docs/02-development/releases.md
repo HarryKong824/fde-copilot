@@ -87,7 +87,7 @@ state.yaml.phase6-rev31.2026-09-26T02-33-59
 ### 2.3 手段三：源 ↔ 部署副本对拍
 
 ```bash
-node _deploy_diff.mjs      # 期望输出：ALL_MATCH
+node tests/_deploy_diff.mjs      # 期望输出：ALL_MATCH
 ```
 
 **作用**：工作区里的**源目录**与 DSH 里的**部署副本**是两份文件。
@@ -124,8 +124,8 @@ node _deploy_diff.mjs      # 期望输出：ALL_MATCH
 ```
 ① 存快照        cp -r <插件>  _snapshots/<日期>-before/<插件>
 ② 改代码
-③ 跑回归        bash _run_all_tests.sh     → 期望 ALL-TESTS-GREEN
-④ 对拍          node _deploy_diff.mjs      → 期望 ALL_MATCH
+③ 跑回归        bash tests/_run_all_tests.sh     → 期望 ALL-TESTS-GREEN
+④ 对拍          node tests/_deploy_diff.mjs      → 期望 ALL_MATCH
 ⑤ 部署          cp -r  到  <DSH_HOME>\profiles\web\node_modules\
 ⑥ 重启 DSH      ⚠️ 必须——改 lib/*.js 不重启等于没改
 ⑦ 活验          驱动真实模型调工具，看链上是否出现预期记录

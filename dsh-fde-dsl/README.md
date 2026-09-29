@@ -174,7 +174,7 @@ D3 的六项硬判据，**任一项失败即整体不通过**：
 ```powershell
 cd "E:\DSH-desktop\DeepSeek Harness\data\dsh-home\profiles\web"
 pnpm remove dsh-fde-dsl
-pnpm add file:"C:\Users\DELL\WorkBuddy\2026-09-22-18-30-18\dsh-fde-dsl"
+pnpm add file:"./dsh-fde-dsl"
 ```
 
 2. **改 `lib/*.js` 必须重启 DSH 进程**，翻 `mode` 无效（这条是踩出来的）
@@ -272,7 +272,7 @@ copy examples\logic.yaml   E:\ontologyRoot\logic.yaml
 
 ```powershell
 & "C:\Users\DELL\.workbuddy\binaries\node\versions\22.22.2-3\node.exe" `
-  "C:\Users\DELL\WorkBuddy\2026-09-22-18-30-18\_fde_dsl_test.mjs"
+  "tests/_fde_dsl_test.mjs"
 # 结果落在 _dsl_test_out.txt（自己写文件，规避控制台代码页乱码）
 ```
 
@@ -326,7 +326,7 @@ D3 验的是"规则↔实现一致"，**规则就写在 objects / logic 里**。
 
 🔴 **两侧 alg 表必须一致**：`ANCHOR_ALGS` 在本文件的 **dsl** 与 phase 的 `lib/mirror.js` 各有一份
 （两个包各自独立安装，跨包 import 会让"一个包没装"直接拖垮另一个）。
-`_fde_d2d3_test.mjs` 有一条用例逐项比对两张表 —— 改一边忘另一边会立刻变红。
+`tests/_fde_d2d3_test.mjs` 有一条用例逐项比对两张表 —— 改一边忘另一边会立刻变红。
 
 > ⚠️ 广播失败只 `logger.warn`，**不得**让校验本身失败（继承 `fde-run-guardrails-check` 的既有模式）。
 
@@ -335,7 +335,7 @@ D3 验的是"规则↔实现一致"，**规则就写在 objects / logic 里**。
 ## 10. 变更窗口 2026-09-24 —— ✅ **两条都已改完，待一次重启 + 一次活验**
 
 两条都来自 2026-09-24 活体验证的观察，性质都判为"要做"。**按"同进程、都要重启"打包成一次窗口**：
-各自改完 → 跑全量离线回归（含 `_shelltok_test.mjs` 18 例）→ dsl 侧在**已安装副本目录**跑 `precheck.mjs`
+各自改完 → 跑全量离线回归（含 `tests/_shelltok_test.mjs` 18 例）→ dsl 侧在**已安装副本目录**跑 `precheck.mjs`
 → **一次重启 + 一次活验**。
 
 前置基线已存 `_baseline/baseline-2026-09-24.txt`（6 个脚本结果 + 源码 SHA-256），改完直接对拍。
@@ -411,7 +411,7 @@ glob ontology → 被 gate 拒（#37 deny）→ 猜 5 个文件名（`rules.yaml
 
 ### 10.2 读通道的"读探测"不落审计（属 **gate** 插件，不是本插件）
 
-**✅ 实现状态（2026-09-24）**：已改完（gate `lib/tools.js`），新增回归 `_gate_readprobe_test.mjs` **15/15 全绿**。
+**✅ 实现状态（2026-09-24）**：已改完（gate `lib/tools.js`），新增回归 `tests/_gate_readprobe_test.mjs` **15/15 全绿**。
 三类读探测各落一条 `decision: read-probe`（`OutOfOntology` / `ENOENT` / `EISDIR`），**记而不拦** ——
 抛错的错误类型、文案、allow/deny 结论**一字未改**，回归里专门有断言守住这条。
 回归同时验证了哈希链仍连续（seq 递增 1、prevHash 衔接），且 read-probe **不冒充 deny**
@@ -437,7 +437,7 @@ glob ontology → 被 gate 拒（#37 deny）→ 猜 5 个文件名（`rules.yaml
 - 落地要防日志膨胀（模型猜文件名会刷屏）：建议记为独立类别 `read-probe`，**记而不拦**。
 - **这个窗口里只有上面这一件事，别给它打包别的洞。** 特别澄清一条容易记混的：
   `cmd /c "type E:\ontologyRoot\poc-t5.md"`（引号字符串被当成一个 token）**已于 2026-09-23 修好**，不是待办 ——
-  证据：`_shelltok_test.mjs` 的 case #26 就是这条命令串、`want: 'deny'`，回归 18/18 且该 case 通过 deny；
+  证据：`tests/_shelltok_test.mjs` 的 case #26 就是这条命令串、`want: 'deny'`，回归 18/18 且该 case 通过 deny；
   修复前后 A/B 也已对拍（旧代码 5 种形态全 allow、新代码全 deny）。
   它缺的**只是活体拦截演示**（模型当时改用了 `fde_ontology_read`，线上证据取不到），
   措辞边界见手册 §4.2 / §7 #2 —— **这是"缺证据"，不是"有洞"**，两者在这项目里差一个量级的工作量。

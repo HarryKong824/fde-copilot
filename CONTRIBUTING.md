@@ -33,7 +33,7 @@
 ### 2.1 跑全套回归
 
 ```bash
-bash _run_all_tests.sh
+bash tests/_run_all_tests.sh
 #   期望最后两行（本机**没有**部署 DSH 时）：
 #   共 41 个套件；已跑 37；跳过 4（白名单内，需本机部署的 DSH）；失败 0；疑似空程序 0
 #   ALL-TESTS-GREEN
@@ -48,14 +48,14 @@ bash _run_all_tests.sh
 >
 > ⚠️ **「跳过 4」是正常输出，不是缺陷**：那 4 套要读你**本机已部署**的插件副本，
 > 没有那份部署就跑不了。**别把它们的跳过改写成"通过"** ——
-> 白名单按名字钉死在 `_run_all_tests.sh` 里，**别处的 `exit 77` 一律算失败**。
+> 白名单按名字钉死在 `tests/_run_all_tests.sh` 里，**别处的 `exit 77` 一律算失败**。
 
 ---
 
 ### 2.2 源 ↔ 部署副本对拍
 
 ```bash
-node _deploy_diff.mjs
+node tests/_deploy_diff.mjs
 #   不传参数 = 对拍全部 4 个插件。期望：末行 判定：ALL_MATCH
 #   退出码：0 = 全一致；1 = 有差异；77 = 本机没有任何部署（**无法验证，不等于一致**）
 #   没有那份部署时它会报 SKIP 并 exit 77 —— **别把它读成 ALL_MATCH**。

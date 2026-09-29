@@ -222,19 +222,19 @@ C1（`dsh-fde-ontology-gate/lib/classify.js`）能判出变更级别，但**判�
 
 | 层 | 仪器 | 结果 | 覆盖什么 |
 |---|---|---|---|
-| 离线单测 | `_fde_c2_test.mjs` | 30/0 | 三支流程分派、拒绝码、审批三态、锚点失效 |
-| 变异注入 | `_fde_c2_mut.mjs` | **9/9 具名断言抓住**（`ALL-MUTANTS-CAUGHT`） | 证明上面那 30 条断言**不是恒真** |
+| 离线单测 | `tests/_fde_c2_test.mjs` | 30/0 | 三支流程分派、拒绝码、审批三态、锚点失效 |
+| 变异注入 | `tools/_fde_c2_mut.mjs` | **9/9 具名断言抓住**（`ALL-MUTANTS-CAUGHT`） | 证明上面那 30 条断言**不是恒真** |
 | 真 SDK 注册 | `precheck.mjs` | OK（且对两个坏样本判红） | `defineTool` 构造 + `output.schema` 过真 SDK 校验 |
-| 真 SDK + 真数据 | `_fde_c2_live.mjs` | 6/0 | 真 `gate.jsonl`（只读）+ 真 `E:/ontologyRoot` 上的判定 |
+| 真 SDK + 真数据 | `tools/_fde_c2_live.mjs` | 6/0 | 真 `gate.jsonl`（只读）+ 真 `E:/ontologyRoot` 上的判定 |
 | **DSH 进程内 · 注册层** | 跨会话 `request/header` 逐名 diff | `fde_change_close` 属**新增**项、非 fde 工具面逐字未变 | 工具真的挂进了 DSH 的工具面 |
-| **DSH 进程内 · 调用层** | `_c2_live_drive.mjs`（`baseline`→`drive`→`verify`） | **7 条判据 0 失败**（2026-09-29） | 模型在真进程里**真调了一次** `fde_change_close` |
+| **DSH 进程内 · 调用层** | `tools/_c2_live_drive.mjs`（`baseline`→`drive`→`verify`） | **7 条判据 0 失败**（2026-09-29） | 模型在真进程里**真调了一次** `fde_change_close` |
 
-✅ **调用层怎么验的**（2026-09-29 补上）：`_live_drive.mjs --new` 起一个 `standard` preset 会话，prompt 只让它调一次 `fde_change_close`、`reason` 写**如实的活验说明**（不编业务理由）。结果：模型真的调了（args 完整）⇒ 工具 **fail-closed 拒绝**，文案「最近一次变更的记录里没有级别信息：gate.jsonl seq=5…本插件不猜级别」。**拒得对**：`fde-audit/phase.jsonl` `seq=116` `type=change-close-denied`、**`outcome=no-level`**（= 离线期望的 `CHANGE_NO_LEVEL`）、带 `callId`、`prevHash` 接得上前一条。**零副作用**：`memory/state.yaml` **sha 未变**、gate 链 **Δ0**、三条链新增行里**都没有**"放行/闭环成功"类记录（phase 链另一条 +1 是新会话的 `restrict-applied`，正常）。
+✅ **调用层怎么验的**（2026-09-29 补上）：`tools/_live_drive.mjs --new` 起一个 `standard` preset 会话，prompt 只让它调一次 `fde_change_close`、`reason` 写**如实的活验说明**（不编业务理由）。结果：模型真的调了（args 完整）⇒ 工具 **fail-closed 拒绝**，文案「最近一次变更的记录里没有级别信息：gate.jsonl seq=5…本插件不猜级别」。**拒得对**：`fde-audit/phase.jsonl` `seq=116` `type=change-close-denied`、**`outcome=no-level`**（= 离线期望的 `CHANGE_NO_LEVEL`）、带 `callId`、`prevHash` 接得上前一条。**零副作用**：`memory/state.yaml` **sha 未变**、gate 链 **Δ0**、三条链新增行里**都没有**"放行/闭环成功"类记录（phase 链另一条 +1 是新会话的 `restrict-applied`，正常）。
 ⚠️ 如实说明两处：① 活体里**模型看不到错误码**（只见 `Error: <message>`，码在 `error.info.code` 由宿主拿）—— SDK 的既定形状，不是缺陷；码的落点在链上（`outcome`）。② 这一次的 `outcome` 落在**真链**上、但它是**拒绝**路径（fail-closed），**没有推进任何业务状态**。
 
-🔴 **`_fde_c2_live.mjs` 验的是"真 SDK + 真数据路径"，不是"DSH 进程内"** —— 它在独立 node 进程里 import 已安装副本的 `lib/`，所以真 SDK 的 `defineTool`/`HarnessError` 都真的被构造了。**"DSH 进程内"那两层**（工具注册进 fiber、模型真调得到）**要另验**，见上表最后两行。这一层边界必须分开写。
+🔴 **`tools/_fde_c2_live.mjs` 验的是"真 SDK + 真数据路径"，不是"DSH 进程内"** —— 它在独立 node 进程里 import 已安装副本的 `lib/`，所以真 SDK 的 `defineTool`/`HarnessError` 都真的被构造了。**"DSH 进程内"那两层**（工具注册进 fiber、模型真调得到）**要另验**，见上表最后两行。这一层边界必须分开写。
 
-**真链上验到的是哪条路径（诚实）**：`_fde_c2_live.mjs` 的场景 1 读**真 `gate.jsonl`**（当前实况：17 条记录、`fde_ontology_write` 4 条、其中 `allow` 2 条 = seq=4/5，**都早于 C1 落地、都没有 `level`**，最新的 allow 是 seq=5）⇒ 真链上验到的是 **`CHANGE_NO_LEVEL`（fail-closed 不猜级别）** 这条路径。**成功路径（L0/L1/L2 闭环）与 L2 审批走的是隔离链**（写在临时目录，不碰真链、不碰真 ontology）—— 因为真链里根本没有带 level 的 allow 记录（要造一条就得真的改 ontology，那是业务动作，不为验证而做）。
+**真链上验到的是哪条路径（诚实）**：`tools/_fde_c2_live.mjs` 的场景 1 读**真 `gate.jsonl`**（当前实况：17 条记录、`fde_ontology_write` 4 条、其中 `allow` 2 条 = seq=4/5，**都早于 C1 落地、都没有 `level`**，最新的 allow 是 seq=5）⇒ 真链上验到的是 **`CHANGE_NO_LEVEL`（fail-closed 不猜级别）** 这条路径。**成功路径（L0/L1/L2 闭环）与 L2 审批走的是隔离链**（写在临时目录，不碰真链、不碰真 ontology）—— 因为真链里根本没有带 level 的 allow 记录（要造一条就得真的改 ontology，那是业务动作，不为验证而做）。
 
 ⚠️ **诚实缺口（C2 范围内未做，不得说成已按 spec 实现）**：
 
@@ -265,7 +265,7 @@ D2 的锚点是 `(行数, 链头 hash)` ⇒ **从你跑完工具到你真正推�
 ⇒ **D2 不再被历史链阻断，且已实测能通过。**
 
 ⚠️ **未验边界（诚实）**：「链在推进前一刻被人动过 ⇒ D2 过期 ⇒ 被拒」这一支**只有离线断言覆盖**
-（`_fde_d2d3_test.mjs:363`）。活体做它必须往 `gate.jsonl` 真写测试记录（不可逆），故未做。
+（`tests/_fde_d2d3_test.mjs:363`）。活体做它必须往 `gate.jsonl` 真写测试记录（不可逆），故未做。
 
 ### 4.2 D1 的 PoC 降级（impl 是 DSL 表达式，不是真函数）
 
@@ -282,7 +282,7 @@ spec 要求 `ref` 解析到**已注册的可执行函数**。本轮 D1 的 `impl
 
 `dsh-tools` **没有** re-export `HarnessError`（它定义在 `@deepseek-ai/dsh-llm`，`dsh-tools` 只是 import 进来给 `ToolNotFoundError extends` 用）。旧写法 `import * as dshTools` + `const HarnessError = dshTools.HarnessError ?? Error` 在真 SDK 下 `dshTools.HarnessError === undefined`，永远走 `?? Error` 兜底分支 ⇒ 结构化 `code`（`PHASE_D1_DENIED` / `PHASE_JUMP_DENIED` / `ROLLBACK_NO_PREAUTH` 等）静默丢失，只剩裸 `Error`。
 
-**已修复（2026-09-28）**：三插件（phase / memory / ontology-gate）统一改为 `import { HarnessError } from '@deepseek-ai/dsh-llm'`（具名 import，code 存 `error.code`）。离线测试加 `threw.code === '...'` 断言；活验脚本 `_fde_c3_live.mjs` 真 SDK 下 13/0 全绿、code 全正确。真 SDK 有 `@deepseek-ai/dsh-llm` 可解析；工作区离线桩用 `node_modules/@deepseek-ai/dsh-llm/index.mjs` 补齐同形状类，离线不崩。
+**已修复（2026-09-28）**：三插件（phase / memory / ontology-gate）统一改为 `import { HarnessError } from '@deepseek-ai/dsh-llm'`（具名 import，code 存 `error.code`）。离线测试加 `threw.code === '...'` 断言；活验脚本 `tools/_fde_c3_live.mjs` 真 SDK 下 13/0 全绿、code 全正确。真 SDK 有 `@deepseek-ai/dsh-llm` 可解析；工作区离线桩用 `node_modules/@deepseek-ai/dsh-llm/index.mjs` 补齐同形状类，离线不崩。
 
 ### 4.5 `projectRoot` 在工作区外 ≠ 模型够不着（诚实边界）
 
@@ -381,13 +381,13 @@ A2/A3 才真被堵上。填值前，它们仍只靠 sandbox + approval 两层**�
 `mirror.restoreSync()` 只读 `phase.jsonl` 的**尾部 64 KiB**（`TAIL_BYTES`）来重建内存镜像。
 实际数据规模下够用（27.9 KiB 时一次读全，2026-09-26 活验实测跨重启重建成功）；
 **但文件超过 64 KiB 后，早于窗口的结论就恢复不出来** ⇒ 重启后会表现为"无结论 ⇒ deny"（fail-closed，不是放行）。
-链长到那个量级时请归档轮转（做法见 gate 的 `_d2_rotate_chain.mjs`）。
+链长到那个量级时请归档轮转（做法见 gate 的 `tools/_d2_rotate_chain.mjs`）。
 
 ### 4.6 restrict 的三条边界（第二批）
 
 1. **「被隐藏的工具调不到」这件事，活体上看不见。** 原因是 restrict 热生效（§6）：模型看不见就不会去调它，
    于是永远不会产出 `UNKNOWN_TOOL` 那条 `tool/result`。这层由**离线**承担 ——
-   `_restrict_dispatch_probe.mjs`（真 `dsh-tools` + 真 `dsh-system-prompt` + 真 cordis，10/10 ALL-PASS）
+   `tools/_restrict_dispatch_probe.mjs`（真 `dsh-tools` + 真 `dsh-system-prompt` + 真 cordis，10/10 ALL-PASS）
    已证 `get(name, agent)` 与工具清单**同源同一个 `view(scope)`**。
    **任何交付文案都不得写成"活体验证了 UNKNOWN_TOOL"** —— 那句话在这个架构下不成立。
 2. **点不上的名字不是"拦住了"，是"没有拦"。** 平台差异（win32 只有 `pwsh`，没有 `bash`）、preset 差异都会让名单里的名字不存在。
@@ -448,7 +448,7 @@ restrict 侧那个 fail-open 已修（§6.5），但**同一个根因在 guard �
 | b | 🔴 **`state.json` 是**明文文件、可被手改** | 与 `memory/break-glass.json` 同族边界（本条清单 4.12 f）：把 `outageSince` 改早 ⇒ 立刻"降级通过"。消费侧的反制只有"阈值必须为正有限数"与"schema 必须匹配"两道形态校验（`readRemoteStateSync`），**挡不住有意的手改**。⇒ 属"进程内软约束"的固有边界，不是本实现的选择 |
 | c | 🟡 **`state.json` 的写者是别的插件** | 本插件只读。若 memory 插件未装 / 未配端点 ⇒ 路径为空 ⇒ L4 **不适用**（不拦）。这是**设计**（见 §5.2），但意味着"L4 生效"这件事**依赖另一个插件的存在**，而本插件**无法验证对方真的在写**（只能看到"那个文件在不在、格式对不对"） |
 | d | 🟡 **降级期的 `degraded` 只在**跑 D2 的阶段**才有** | `DENY_CHECKS` 里只有 Phase 4 跑 D2 ⇒ 其余阶段不跑 D2 ⇒ 括号**不适用** ⇒ 那些阶段的通过**不带** `degraded` 标记。这不是漏记：那些阶段本来就不受这条括号约束；但也意味着**"降级期间发生了多少次通过"只能从 Phase 4 的记录里数** |
-| e | ⚠️ **`evaluateRemote` 两边同解靠测试、不靠类型** | 跨包不 import（0076 §3.3）⇒ 两份实现是**复制**关系。`_fde_d1_test.mjs` 的 F 组用 20 组输入对拍 + 变异 M23（只改一侧）钉住；但**新增第三个消费方时不会自动被覆盖**，必须自己加进对拍集 |
+| e | ⚠️ **`evaluateRemote` 两边同解靠测试、不靠类型** | 跨包不 import（0076 §3.3）⇒ 两份实现是**复制**关系。`tests/_fde_d1_test.mjs` 的 F 组用 20 组输入对拍 + 变异 M23（只改一侧）钉住；但**新增第三个消费方时不会自动被覆盖**，必须自己加进对拍集 |
 | f | ⚠️ **阈值改动不会追溯已有记录** | `degradeAfterMs` 存在 `state.json` 里，由 memory 在每次 `apply()` 用**当时 config** 覆写（config 是权威）。⇒ 改小阈值后，**过去那段中断**会按新阈值重算 ⇒ 可能"一觉醒来就降级了"。这是"现算"的必然代价，换来的是不会过期（见 §5.2 末） |
 
 ---
@@ -497,7 +497,7 @@ spec §8 的 L4 原文：**`deny 校验 = 本地链完整 AND（远端存在 OR 
 
 **判据只看一个文件**：`<projectRoot>/memory/outbox/state.json`（写者是 `dsh-fde-memory`，见它 README §1.11）。
 本插件**不 import memory 的任何文件**（0076 §3.3：插件独立安装，跨包 import 会互相拖垮；先例 `deny-ids.js` / `ANCHOR_ALGS` / `EXPERIMENTS_SUBDIR`），
-只共享**文件格式**；两边一致性由 `_fde_d1_test.mjs` 的 F 组**逐字对拍字面量 + 20 组输入对拍判定**钉住。
+只共享**文件格式**；两边一致性由 `tests/_fde_d1_test.mjs` 的 F 组**逐字对拍字面量 + 20 组输入对拍判定**钉住。
 
 | 情形 | `applicable` | `status` | D2 判定 |
 |---|---|---|---|
@@ -632,7 +632,7 @@ spec §8 的 L4 原文：**`deny 校验 = 本地链完整 AND（远端存在 OR 
 **从第二次重启起就失效**，而判据 1 恰恰是要跑多次重启的那个判据 ⇒ 自相矛盾。
 顺序本就由 `seq` 单调编码，`from` 再编码一遍是冗余 —— 它该编码的是"接续到**哪一层限制**"。
 
-**期望形态**（`_restrict_index_test.mjs` §8 的守门人用例）：
+**期望形态**（`tests/_restrict_index_test.mjs` §8 的守门人用例）：
 
 ```
 #36 applied                    denied=["pwsh"]
@@ -703,7 +703,7 @@ spec §8 的 L4 原文：**`deny 校验 = 本地链完整 AND（远端存在 OR 
 
 > ⚠️ 判据**不能**写成"denied 非空"就落：`degraded` 和 `error` 的 `denied` 都可能是非空名单
 > （`error` 直接写 `denied: want`），但它们**没挂上** —— 记成"限制已失效"就是编造。
-> 这条由 `_restrict_index_test.mjs` §9 的反向用例钉住。
+> 这条由 `tests/_restrict_index_test.mjs` §9 的反向用例钉住。
 
 **幂等天然成立**：落完之后 `record()` 会把索引增量更新成 `lifted` ⇒ 下次对账 `isCarrying()` 为假 ⇒ 不落。
 ⇒ 只在"退出受保护阶段后的第一次对账"落一批，**不会每次启动都刷**。
@@ -777,20 +777,20 @@ if (persisted) for (const id of missed) this.#missedAgents.add(id)
 > ⚠️ 别把 `readStateStrictSync` 写成 `try { return parseState(...) } catch { return null }` ——
 > **那样修不掉**：`parseState` 本身不抛异常，垃圾内容被它逐行跳过后照样返回一个写满默认值的对象。
 > 判据必须是"**文件里到底有没有我们要的键**"，这也是该函数内部走 `parseStateStrict`（稀疏解析）的原因。
-> 这条是被 `_restrict_strictstate_test.mjs` 的"改前必须红"逼出来的：字面实现下 3 条用例全红。
+> 这条是被 `tests/_restrict_strictstate_test.mjs` 的"改前必须红"逼出来的：字面实现下 3 条用例全红。
 
 ### 6.6 第四批的已知边界（必须写死，否则将来会被误读成"没生效"）
 
 1. 🔴 **`restrict-history-miss` 在活体上永远不会触发。**
    触发前提是"尾部窗口（64KiB ≈ 150 条）没覆盖全链"，而当前活体链只有 **36 条** ⇒ 窗口绰绰有余。
-   ⇒ 它**只能靠离线合成长链构造**（`_restrict_index_test.mjs` §5 已用 >64KiB 长链实跑）。
+   ⇒ 它**只能靠离线合成长链构造**（`tests/_restrict_index_test.mjs` §5 已用 >64KiB 长链实跑）。
    看到"从没出现过"时，**不要**据此判它没生效。
 2. 🔴 **`untracked` 的**发射端**在 DSH 现有版本下不可实测（活体上不出现属预期，不是缺陷）。**
    2026-09-26 活验结论：① **UI 没有「关闭会话」这个动作，只有「归档」**，而归档是纯 UI / 存储层操作，
    **不触发 `agent/disposed`**（实测归档一个正处于 `applied` 状态的会话 ⇒ 链上零 `untracked`）；
    ② 进程退出路径也被数据排除 —— `fde-audit/` 下**没有 outbox 文件**（只有 `gate.jsonl` / `phase.jsonl`），
    四次重启（09-25 12:02 / 13:28、09-26 10:05 / 10:14，重启前会话确实带着限制）**全都没有 `untracked`**。
-   ⇒ 该决策的实现正确性**只能由离线用例覆盖**（`_restrict_index_test.mjs` §3 / §8）。
+   ⇒ 该决策的实现正确性**只能由离线用例覆盖**（`tests/_restrict_index_test.mjs` §3 / §8）。
    **看到"从来没出现过"不要判它坏了 —— 是没有可达路径。**
 3. **查不到历史 ⇒ 一律退化成 `applied`，绝不退化成"不挂"。**
    宁可记错一个 decision，也不能因为查不到历史就不给 agent 挂限制（fail-safe 方向）。
@@ -891,7 +891,7 @@ rollback_at: ""                # C3：回滚观察期起点（ISO），空串=�
   - `parseable: false` → 「锁文件不可解析：半写/损坏，无法判定是否过期。**该锁不会自行过期** —— 请确认没有并发写后，手工删除 `<锁路径>` 再重试。」+ 审计号（**不出现**「未过期」二字，也不拼"持有者 pid"那段，否则是半截句）。
   - ⚠️ 不可解析时 `at = NaN` → `stale` 被短路为 `false`，**"过没过期"这个判断根本没做出** —— 文案若沿用"未过期。稍后重试"就是说谎，且会把模型推向等待（活体实测：模型据此提出"等到过期时间"），违反"不重试等待"的纪律。
 - 写入：写前重读 → `revision +1` → 写 `.tmp` → `rename()` 原子覆盖。释放放 `finally`。
-- ⚠️ `acquireLock` 必须留在 `writeState` 的 `try` **之外**：挪进 `try` 会让 `finally` 的 `releaseLock` 顺手**删掉别人的锁**。`_fde_phase_test.mjs` 有专门一条断言拦这个退化。
+- ⚠️ `acquireLock` 必须留在 `writeState` 的 `try` **之外**：挪进 `try` 会让 `finally` 的 `releaseLock` 顺手**删掉别人的锁**。`tests/_fde_phase_test.mjs` 有专门一条断言拦这个退化。
 
 **运维须知（两条，都是"看起来像故障、其实不是/是"的分水岭）**
 
@@ -916,7 +916,7 @@ payload：{ check: 'D1'|'D2'|'D3'|'D4'|'D5', passed: boolean, anchor: {...}, det
 | D2 | **本插件** `fde-run-audit-check` | `audit-chain(len+head)@v1` | `{alg, files:[gateAuditPath], len, sha256}` |
 
 alg 表在 **phase `lib/mirror.js` 与 dsl `lib/tools.js` 各有一份**（两个独立安装的包，不能跨 import，
-否则一个包没装会拖垮另一个）⇒ 一致性由 `_fde_d2d3_test.mjs` 的"两侧逐项相同"用例机器钉住。
+否则一个包没装会拖垮另一个）⇒ 一致性由 `tests/_fde_d2d3_test.mjs` 的"两侧逐项相同"用例机器钉住。
 
 **为什么要分派**（这条是这批改动的根）：早期实现里 `verify()` 恒拿 D1 的 alg 比 ⇒
 D3 的结论会被 D1 的判定口径判过期、或反过来永远新鲜。**每个 check 锚自己的文件，就必须按 check 取 alg。**
@@ -992,7 +992,7 @@ D3 的结论会被 D1 的判定口径判过期、或反过来永远新鲜。**�
 |---|---|
 | `lib/config.js` | 纯 JS 零依赖的 `normalizeConfig()` + `DEFAULTS`（fail-closed 唯一权威） |
 | `lib/config-schema.js` | schemastery，仅供 DSH 配置面板提示 |
-| `lib/deny-ids.js` | break-glass 的 deny-id 权威表（`BYPASSABLE_*` / `ANCHORED_*` / 分类 / `makeEventId`）。**与 gate 同名文件逐字相同**（跨包不能 import，`_fde_e1_crosspkg_test.mjs` sha256 对拍） |
+| `lib/deny-ids.js` | break-glass 的 deny-id 权威表（`BYPASSABLE_*` / `ANCHORED_*` / 分类 / `makeEventId`）。**与 gate 同名文件逐字相同**（跨包不能 import，`tests/_fde_e1_crosspkg_test.mjs` sha256 对拍） |
 | `lib/bg-mirror.js` | break-glass 放行表**内存镜像**（`restoreSync` / `update` / `isBypassed` / `openRecords` / `overdueRecords`）。同上，与 gate 副本逐字相同 |
 | `lib/break-glass.js` | 放行表**持久化**（`memory/break-glass.json`，原子写）+ 同步锚点 `currentAnchorSync()`。**只在 phase**（gate 不持有这张表） |
 | `lib/break-glass-tool.js` | 工具 `fde-break-glass`：硬校验 → approval → 写文件 → 写链 → 更新镜像 → 广播（顺序见 §11） |
@@ -1005,7 +1005,7 @@ D3 的结论会被 D1 的判定口径判过期、或反过来永远新鲜。**�
 | `lib/mirror.js` | D1 结论内存镜像（`restoreSync` / `update` / `verify`） |
 | `lib/guard.js` | 同步判定纯函数 `evaluate` + `installGuard` |
 | `lib/check-d2.js` | D2 检查（`fde-run-audit-check`，Stage 5.5） |
-| `lib/remote-state.js` | D1/L4：读 `<projectRoot>/memory/outbox/state.json`（**别的插件写的**）+ `evaluateRemote` 纯判据 —— 与 memory 侧**逐字同解**，靠 `_fde_d1_test.mjs` F 组对拍（§5.2） |
+| `lib/remote-state.js` | D1/L4：读 `<projectRoot>/memory/outbox/state.json`（**别的插件写的**）+ `evaluateRemote` 纯判据 —— 与 memory 侧**逐字同解**，靠 `tests/_fde_d1_test.mjs` F 组对拍（§5.2） |
 | `lib/check-d5.js` | D5 检查（`fde-run-compliance-check` + `verifyComplianceText`，Stage 5.6） |
 | `lib/compliance-write.js` | `writeComplianceDataPolicy` —— D5-pre 确认后写 `compliance.yaml` 的 `data_policy`（B3） |
 | `lib/change-flow.js` | C2：`REQUIRED_CHECKS` / `NEEDS_APPROVAL` 表 + `readLatestChange`（读 gate 链取级别）+ `verifyRequiredChecks` + `describeIncomplete` |
@@ -1059,17 +1059,17 @@ spec §11 给了三类的含义与优先级，但**没给自动判据**（"理�
 
 | 层 | 套件 | 覆盖 |
 |---|---|---|
-| 离线 | `_fde_e1_test.mjs`（62 断言） | deny-id 表 / 镜像 / 持久化 / 两个 guard 的放行 / 五道闸门 / 提醒 / 两个监听器 |
-| 跨包 | `_fde_e1_crosspkg_test.mjs`（7） | `deny-ids.js` / `bg-mirror.js` 两份副本 **sha256 逐字相同** + 行为等价抽查 |
-| 变异 | `_fde_e1_mut.mjs`（20）/ `_fde_e1_wiring_mut.mjs`（6） | 每条断言都被**期望的具名断言**抓住（RED 26 / GREEN 0 / INVALID 0） |
-| 接线 | `_fde_e1_wiring_test.mjs`（19，**import 部署副本**） | "重启后从**自己**的链恢复出放行"这条端到端主张、`P0-1` 同型（监听器被当场注销）、阶段 3 的 D1 放行与锚点失效 |
+| 离线 | `tests/_fde_e1_test.mjs`（62 断言） | deny-id 表 / 镜像 / 持久化 / 两个 guard 的放行 / 五道闸门 / 提醒 / 两个监听器 |
+| 跨包 | `tests/_fde_e1_crosspkg_test.mjs`（7） | `deny-ids.js` / `bg-mirror.js` 两份副本 **sha256 逐字相同** + 行为等价抽查 |
+| 变异 | `tools/_fde_e1_mut.mjs`（20）/ `tools/_fde_e1_wiring_mut.mjs`（6） | 每条断言都被**期望的具名断言**抓住（RED 26 / GREEN 0 / INVALID 0） |
+| 接线 | `tests/_fde_e1_wiring_test.mjs`（19，**import 部署副本**） | "重启后从**自己**的链恢复出放行"这条端到端主张、`P0-1` 同型（监听器被当场注销）、阶段 3 的 D1 放行与锚点失效 |
 | 活验 | 见 §9 第 6 步 | 工具面 diff 恰为 `+fde-break-glass`；真调一次；无 answerer ⇒ 拒 |
 
 **D1/L4 的验收**（在 memory README §2.3 亦有索引，因为套件是**跨包**的）：
 
 | 层 | 套件 | 覆盖 |
 |---|---|---|
-| 离线（跨包） | `_fde_d1_test.mjs`（107 断言） | E 组 = L4 判据五个分支（不适用 / present / degraded / missing / 读不到）+ 两个反例；F 组 = 跨包字面量与 `evaluateRemote` 20 组对拍；G 组 = 回执双向 |
-| 变异（跨包） | `_fde_d1_mut.mjs`（26 条） | 每条断言都被**期望的具名断言**抓住（含 M21「L4 不通过却放行」、M22「链不完整也被忽略」、M23「只改一侧」、M24/M25「回执不说 / 无条件说」） |
-| 活验①**交付态**（✅ **已做**，2026-09-29） | `_fde_d1_live.mjs live`（**纯只读**，用户手动重启 DSH 后跑） | **17/17 全绿**。验的是：D1 代码在真进程里 apply 成功（写出 `telemetry-disabled`，`seq=433`，且链上 `telemetry-*` 只有这一种）/ 该记录读作"配置选择不是故障" / **L4「本地链完整」在活体上真算过**（434 条按 `seq` 重放：断链 0、哈希不符 0、无重号无缺号、链尾 head == 末行 hash；含负向自证 `C7`）/ 未配端点 ⇒ `outbox/` 与 `state.json` 都不存在 / 四个 fde 插件全 `fiberPhase: active` |
-| 活验②**端到端**（🔴 **未做**，PoC 内放弃） | `prep` → `v1`–`v5` → `restore` ＋ 桩 `_fde_d1_stub.mjs` | **未验的**：真进程里的心跳投递 / 入队出队 / 降级三档 / 恢复补传 / `crossCheckRemoteSync` 对**真实** `state.json`（由真进程写的）的判定。**为什么没做**：要改 `cordis.patch.yml` 并重启 DSH **两次**，超出"只读活验"范围。⇒ ⚠️ 交付文案只可写"L2/L3 有离线证据（注入 `fetchImpl`）与本地桩设计，**未在真实进程里跑过**" |
+| 离线（跨包） | `tests/_fde_d1_test.mjs`（107 断言） | E 组 = L4 判据五个分支（不适用 / present / degraded / missing / 读不到）+ 两个反例；F 组 = 跨包字面量与 `evaluateRemote` 20 组对拍；G 组 = 回执双向 |
+| 变异（跨包） | `tests/_fde_d1_mut.mjs`（26 条） | 每条断言都被**期望的具名断言**抓住（含 M21「L4 不通过却放行」、M22「链不完整也被忽略」、M23「只改一侧」、M24/M25「回执不说 / 无条件说」） |
+| 活验①**交付态**（✅ **已做**，2026-09-29） | `tools/_fde_d1_live.mjs live`（**纯只读**，用户手动重启 DSH 后跑） | **17/17 全绿**。验的是：D1 代码在真进程里 apply 成功（写出 `telemetry-disabled`，`seq=433`，且链上 `telemetry-*` 只有这一种）/ 该记录读作"配置选择不是故障" / **L4「本地链完整」在活体上真算过**（434 条按 `seq` 重放：断链 0、哈希不符 0、无重号无缺号、链尾 head == 末行 hash；含负向自证 `C7`）/ 未配端点 ⇒ `outbox/` 与 `state.json` 都不存在 / 四个 fde 插件全 `fiberPhase: active` |
+| 活验②**端到端**（🔴 **未做**，PoC 内放弃） | `prep` → `v1`–`v5` → `restore` ＋ 桩 `tools/_fde_d1_stub.mjs` | **未验的**：真进程里的心跳投递 / 入队出队 / 降级三档 / 恢复补传 / `crossCheckRemoteSync` 对**真实** `state.json`（由真进程写的）的判定。**为什么没做**：要改 `cordis.patch.yml` 并重启 DSH **两次**，超出"只读活验"范围。⇒ ⚠️ 交付文案只可写"L2/L3 有离线证据（注入 `fetchImpl`）与本地桩设计，**未在真实进程里跑过**" |

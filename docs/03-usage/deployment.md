@@ -33,10 +33,10 @@ cd <已安装副本目录>
 node precheck.mjs
 
 # ② YAML 锚点/条目顺序 smoke check（退出码敏感）
-node _probe_yaml_anchor.mjs
+node tools/_probe_yaml_anchor.mjs
 
 # ③ 离线回归全套件
-bash _run_all_tests.sh
+bash tests/_run_all_tests.sh
 #   期望最后两行（本机**没有**部署 DSH 时）：
 #   共 41 个套件；已跑 37；跳过 4（白名单内，需本机部署的 DSH）；失败 0；疑似空程序 0
 #   ALL-TESTS-GREEN
@@ -44,7 +44,7 @@ bash _run_all_tests.sh
 #   退出码：0 = 通过；1 = 有失败。
 ```
 
-> ⚠️ `_run_all_tests.sh` 会**预警小于 400 字节的脚本**。一条真实教训：`_fde_d5_test.mjs` 曾是 **0 字节**，而跑一个空程序 `node` 必然 **零断言 + EXIT=0** ⇒ 产物文件里写着「PASS 9 / FAIL 0」却**从未真跑过**。
+> ⚠️ `tests/_run_all_tests.sh` 会**预警小于 400 字节的脚本**。一条真实教训：`tests/_fde_d5_test.mjs` 曾是 **0 字节**，而跑一个空程序 `node` 必然 **零断言 + EXIT=0** ⇒ 产物文件里写着「PASS 9 / FAIL 0」却**从未真跑过**。
 
 ---
 
@@ -74,15 +74,15 @@ E:\DSH-desktop\DeepSeek Harness\data\dsh-home
 ### 3.3 源 ↔ 部署副本对拍（**关键一步**）
 
 ```bash
-node _deploy_diff.mjs
+node tests/_deploy_diff.mjs
 #   不传参数 = 对拍全部 4 个插件。期望：末行 判定：ALL_MATCH
 #   退出码：0 = 4 个插件全一致；1 = 有差异；77 = 本机没有任何部署（**无法验证，不等于一致**）
 #   没有那份部署时它报 SKIP 而不是 ALL_MATCH —— 设 FDE_DSH_HOME=<你的 dsh-home> 即可真跑。
 #   只想对拍一个插件（原用法，仍然可用）：
-#     node _deploy_diff.mjs dsh-fde-phase "<DSH_HOME>/profiles/web/node_modules/dsh-fde-phase"
+#     node tests/_deploy_diff.mjs dsh-fde-phase "<DSH_HOME>/profiles/web/node_modules/dsh-fde-phase"
 ```
 
-> ⚠️ **对拍的域包含 `README.md`，不只是 `lib/*.js`**。本项目的教训：只改了源 README 忘了同步副本，`_deploy_diff.mjs` 报 `HAS-DIFF`，而 14 个文件里**只有这一处**不一致 —— 极易被误读成「代码没同步」。
+> ⚠️ **对拍的域包含 `README.md`，不只是 `lib/*.js`**。本项目的教训：只改了源 README 忘了同步副本，`tests/_deploy_diff.mjs` 报 `HAS-DIFF`，而 14 个文件里**只有这一处**不一致 —— 极易被误读成「代码没同步」。
 >
 > ⚠️ **README 不参与运行时**，补一次 `cp` 即可，**不必重启**。
 
@@ -200,7 +200,7 @@ node -e "const fs=require('fs');const r=fs.readFileSync(process.argv[1],'utf8').
 ### 6.3 链完整性校验
 
 ```bash
-node _replay_phase_audit.mjs
+node tools/_replay_phase_audit.mjs
 #   期望：断链 0 处 / CHAIN-INTACT
 ```
 
@@ -267,7 +267,7 @@ cp -r "<DSH_HOME>/fde-audit" "./backup-$STAMP/fde-audit"
 | 推进总被拒 | 读拒绝理由；常见是「无 D1 结论」（先跑 `fde-run-guardrails-check`） |
 | 「锁未过期」 | 确认持有 PID 是否还活着。**不要盲删锁文件** |
 | 审计链报断链 | **停止写入 → 备份 → 上报**。先确认是「真断链」还是「按行序重放的假断链」（§6.3） |
-| `_deploy_diff.mjs` 报 HAS-DIFF | 看**具体哪个文件**——很可能只是 README 没同步（§3.3） |
+| `tests/_deploy_diff.mjs` 报 HAS-DIFF | 看**具体哪个文件**——很可能只是 README 没同步（§3.3） |
 
 ---
 
@@ -278,7 +278,7 @@ cp -r "<DSH_HOME>/fde-audit" "./backup-$STAMP/fde-audit"
 cp -r dsh-fde-phase "./_snapshots/$(date +%Y-%m-%d)-before/dsh-fde-phase"
 
 # 改代码 → 跑回归 → 对拍 → 部署 → 重启
-bash _run_all_tests.sh && node _deploy_diff.mjs
+bash tests/_run_all_tests.sh && node tests/_deploy_diff.mjs
 ```
 
 > ⚠️ **改代码后必须重跑全套件**。本项目的历史快照有 **35 个**（`_snapshots/`），命名格式就是 `<日期>-before` —— 这是**改动可追溯**的做法。

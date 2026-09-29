@@ -42,7 +42,7 @@
 **P2**
 - 统一三份审计链的 schema
 - 消除「一物两名 / 一名两物」
-- 修 `_replay_phase_audit.mjs` 的崩溃零输出
+- 修 `tools/_replay_phase_audit.mjs` 的崩溃零输出
 - 恒真判据全仓排查 + 检查器自检
 
 ---
@@ -59,14 +59,14 @@
 | 1 | **GitHub 把许可证识别成 "Other" 而非 MIT** | `gh api` 读回 `spdx_id: NOASSERTION` | `LICENSE` 只留规范 MIT 正文；四项披露移到新增的 `DISCLOSURE.md` |
 | 2 | **报漏洞的两条渠道都是死的**（私密报告未开启；备用渠道指向不存在的"仓库联系方式"） | `private-vulnerability-reporting.enabled === false` | 已开启该功能；备用渠道改为「开一个不含细节的公开 Issue」 |
 | 3 | **9 套回归写死作者本机绝对路径**，别人克隆下来必挂 | 在隔离目录下跑，9 套 `EXIT=1` | 改为从脚本自身位置推导；**变异验证**：改名插件目录 ⇒ 套件报 `ERR_MODULE_NOT_FOUND`，证明它读的确实是自己那份 |
-| 4 | **成本文档 10 处 `【待补充】`** —— 用户明确要求的 Token 费用没有内容 | grep 全仓 | 从会话记录实测汇总，见[成本与资源统计](docs/04-retrospective/cost-resources.md)；附带可复算工具 `_token_usage_report.mjs` |
+| 4 | **成本文档 10 处 `【待补充】`** —— 用户明确要求的 Token 费用没有内容 | grep 全仓 | 从会话记录实测汇总，见[成本与资源统计](docs/04-retrospective/cost-resources.md)；附带可复算工具 `tools/_token_usage_report.mjs` |
 | 5 | **41 套回归不是跨平台的**（Ubuntu 上挂 9 套） | 新加的 CI 第一次跑就红了 —— **幸好没先写成"应该会绿"** | CI 固定在 `windows-latest`（项目真正验证过的平台）；**没有**改成"Linux 失败也算通过"（那是假绿）。平台边界已写进 README |
 | 6 | **41 套回归在 Node 20 上跑不了**（挂 2 套：`zlib` **没有** `zstdDecompressSync`） | 上一条改成 `windows-latest` 后**仍然红**，追下去才是这个 | `engines` 由 `>=20` 改为 **`>=22.15`**（实测：20.20.2 无该导出 / 22.15.0 有）；CI 改跑 `22.15.0` 与 `24` 两档 |
 | 7 | **4 套被算进「41 套离线回归」，其实根本不是离线的**（要读本机**已部署**的 DSH：`E:/DSH-desktop/...`） | 同上：CI 上这 4 套全挂，而开发机 E: 盘在 ⇒ 一直没暴露 | 改为「没有那份部署就**明确跳过并报条数**」（`exit 77`）；汇总行固定报出「跳过 N」；**CI 额外断言「跳过数 == 4」**，让"跳过"不能变成吞红灯的出口 |
-| 8 | **`npm test` 永远报成功** —— `_run_all_tests.sh` 只 `echo` 不 `exit`，退出码恒为 0 | 读脚本时发现：**判定行**与**退出码**不同源 | 判定与退出码改为同源（`0` 通过 / `1` 有失败）。这正是本项目一直在抓的"仪器自己撒谎"那一类 |
-| 9 | `_fde_memory_decisions_test.mjs` 的**子脚本** `_a2_inject_fail.mjs` 写死作者本机路径 | CI 上该套件 §6.7 判红 | 改为从脚本自身位置推导（与前面那 9 套同一种修法） |
-| 10 | **文档承诺的 `node _deploy_diff.mjs` 根本不能用** —— 脚本只支持双参数形态，不传参数就打印「用法」并 `exit 2` | 写出这条命令后**照着跑了一次**，当场看到 `用法: …` | 改为无参数即对拍**全部 4 个插件**（原双参数用法保留）。**8 处文档 + `npm run deploy:diff` 一次性变成真的**，而不是去改那 8 处 |
-| 11 | `_paths_test.mjs` 的**跳过不进 RESULT 行** —— 本机 `pass=7`、CI `pass=8`，而「少跑 1 条」只印在上一行 | 比对本机与 CI 日志时发现两个数不一致，读源码才知有一支条件断言 | 把 `skip=N` 写进 `RESULT` 行本身；**"必须读上一行才能发现"等价于"在最小 grep 面下不存在"** |
+| 8 | **`npm test` 永远报成功** —— `tests/_run_all_tests.sh` 只 `echo` 不 `exit`，退出码恒为 0 | 读脚本时发现：**判定行**与**退出码**不同源 | 判定与退出码改为同源（`0` 通过 / `1` 有失败）。这正是本项目一直在抓的"仪器自己撒谎"那一类 |
+| 9 | `tests/_fde_memory_decisions_test.mjs` 的**子脚本** `tests/_a2_inject_fail.mjs` 写死作者本机路径 | CI 上该套件 §6.7 判红 | 改为从脚本自身位置推导（与前面那 9 套同一种修法） |
+| 10 | **文档承诺的 `node tests/_deploy_diff.mjs` 根本不能用** —— 脚本只支持双参数形态，不传参数就打印「用法」并 `exit 2` | 写出这条命令后**照着跑了一次**，当场看到 `用法: …` | 改为无参数即对拍**全部 4 个插件**（原双参数用法保留）。**8 处文档 + `npm run deploy:diff` 一次性变成真的**，而不是去改那 8 处 |
+| 11 | `tests/_paths_test.mjs` 的**跳过不进 RESULT 行** —— 本机 `pass=7`、CI `pass=8`，而「少跑 1 条」只印在上一行 | 比对本机与 CI 日志时发现两个数不一致，读源码才知有一支条件断言 | 把 `skip=N` 写进 `RESULT` 行本身；**"必须读上一行才能发现"等价于"在最小 grep 面下不存在"** |
 | 12 | **README 的计数与它自己声明的口径矛盾** —— 同句写了口径是 `grep -rl "Users/DELL"`，但给的"6 份文档"是**宽松口径**（只含 `DELL`）的数，按声明的口径数出来是 **4** | 写复核报告前**当场执行那条 grep**，得到 4 | 改为 4，并**逐一列出**那 4 份（`README.md` / `CHANGELOG.md` / `dsh-fde-ontology-gate/README.md` / `dsh-fde-ontology-gate/HANDOFF.md`）——只枚举不写总数，读者才数得出来 |
 
 ### 新增
@@ -74,7 +74,7 @@
 - **`DISCLOSURE.md`** —— 四项如实披露（从 `LICENSE` 拆出，理由是**机器可识别性**，不是条款变更）
 - **`package.json`** —— 提供 `npm test` 入口（原先没有，别人不知道该怎么跑测试）
 - **`.github/workflows/test.yml`** —— CI，每次推送自动跑那 41 套
-- **`_token_usage_report.mjs`** —— Token 用量统计工具（可移植版，无本机路径）
+- **`tools/_token_usage_report.mjs`** —— Token 用量统计工具（可移植版，无本机路径）
 - 仓库 topics（`ai-safety` / `guardrails` / `audit-trail` / `fail-closed` / `hash-chain` 等）
 - **`v0.0.1` 标签 + [Release](https://github.com/HarryKong824/fde-copilot/releases/tag/v0.0.1)** —— 交付时补打了版本点，使「现场装的是哪一版」从此**有坐标可指**（此前只能靠 `_snapshots/` 的人工快照，见 [版本管理记录](docs/02-development/releases.md)）
 
@@ -86,7 +86,7 @@
 - `README.md` —— 「41 套全绿」改为按**本机有无部署**两种口径分别写（有 ⇒ 41 跑；无 ⇒ 37 跑 + 4 跳过）
 - `docs/README.md`、`data-licensing.md` —— 同步许可证拆分后的引用
 - `CHANGELOG.md` —— 「开发期间没有用 git」的表述更正（交付时已纳入 git）
-- `README.md` —— 「哪些脚本你能跑」表补 `_deploy_diff.mjs` 一行（无参数 = 对拍全部 4 个插件；无部署时报 `SKIP` + `exit 77`，**不是** `ALL_MATCH`）与 `_wb_*.mjs` 一行
+- `README.md` —— 「哪些脚本你能跑」表补 `tests/_deploy_diff.mjs` 一行（无参数 = 对拍全部 4 个插件；无部署时报 `SKIP` + `exit 77`，**不是** `ALL_MATCH`）与 `_wb_*.mjs` 一行
   （**WorkBuddy 时期**的只读探测脚本，2026-09-28 WorkBuddy 退出后已无人维护；**保留是刻意的**——
   它们是那段协作的诚实记录，且全仓库**没有任何一处引用它们**。它们也含作者路径，**算在"40 个"里面**。）
 
@@ -99,6 +99,65 @@
 - **有 4 套回归必须连着「本机已部署的 DSH」才能真跑**（见上表 #7）。
   在没有那份部署的机器上它们**明确跳过**、不判红 —— 这是**如实标注**，不是"已覆盖"。
   ⇒ 准确口径是：**CI 上真正跑的是 37 套，另有 4 套跳过**。该口径写在 README 与 CI 的判定步里。
+
+### 仓库归置与产品定位更正（2026-09-29 下午）
+
+**背景**：使用者指出两件事 —— ① 仓库根「一大长串那么多文件」；② 对外表述把**FDE 自动化工具**
+说成了"给 AI 助手装护栏的插件套件"，**把机制当成了产品**。
+
+#### 归置（根目录条目 `182` → `19`）
+
+| 移到哪 | 搬了什么 | 数量 |
+|---|---|---|
+| `tests/` | 41 套离线回归 + 它们**真正** import/spawn 的 7 个脚本 + `_run_all_tests.sh` + `_fixtures/` | 41 套 + 7 |
+| `tools/` | 不进回归的独立脚本（活验 / 勘察探针 / 一次性核账） | 115 |
+| `evidence/` | 历史测试产物（已在 `.gitignore`，**不进仓库**） | 30 |
+
+- 🔴 **README 里原先那句「相对导入 ⇒ 脚本不可移动的硬约束」是错的，已删。**
+  实测：移动**确实**要改两类路径 —— ① 相对导入 `'./dsh-fde-*'` → `'../dsh-fde-*'`（44 文件 / 127 处）；
+  ② 少数按「我所在目录 = 仓库根」拼的运行时路径，**必须逐文件判断**（`_fde_d1_mut.mjs` 两种语义混用，
+  拆成 `HERE`＝同目录 / `REPO`＝仓库根，不能一刀切加 `'..'`）。
+  ⇒ 它是「移动时顺手改路径」，不是「不可移动」。
+- **移动过程失败过两轮**（37 套红 → 11 套红 → 0 绿）。最终：
+  `共 41 个套件；已跑 41；跳过 0；失败 0` + `ALL-TESTS-GREEN` + `EXIT=0`。
+- `tests/_run_all_tests.sh` 加**自定位**（`cd "$(dirname "$0")"`）+ **零套件显式判红**。
+  ⚠️ 澄清一条：原先怀疑「从别的 CWD 跑会报假绿」——**未复现**。实测 bash **不**展开未匹配的 glob、
+  `node` 跑字面量 `_*_test.mjs` 会 `EXIT=1` ⇒ 计入失败 ⇒ `HAS-FAILURE`；
+  那是**一条令人困惑的红，不是假绿**。仍加了两道守卫把坑填掉。
+- **顺手清掉 4 个"假依赖"**：`_assert_lock_msg` / `_cc_transcript_dump` / `_dsh_lifecycle` / `_cc_tool_list`
+  原本被当成"套件依赖"搬进 `tests/`，实际**只被注释提到名字**、没有任何 `import`/`spawn` ⇒ 已挪去 `tools/`。
+  判据写在 `tests/README.md`：**看有没有被 import/spawn，不看有没有被提到**。
+- 新增 `tests/README.md`、`tools/README.md`。
+- **代码零改动**（全是布局与文档）。`npm test` 与 `npm run deploy:diff` 当场跑过：前者 `ALL-TESTS-GREEN`，
+  后者 `ALL_MATCH 4` / `EXIT=0`。
+
+#### 定位更正（只改措辞，不改行为）
+
+- `README.md` 首句 → 「**把 Palantir 式 FDE（前向部署工程师）的交付动作，固化成一套 AI 能照着走的插件**」；
+  新增 **15 个交付阶段（4 区）** 表与三条硬规则（阶段只能 `+1` ／ `L0-L2` 定级看**语义载荷** ／
+  成熟度 `draft→verified→locked` **只能升**）。「门禁 + 审计」明确降为**实现机制**。
+- `package.json` 的 `description` 与 `keywords` 同步（补 `fde` / `palantir-style` / `ontology`）。
+- 桌面通俗说明 `01-这是什么.md`（新增 15 阶段表）、`03-名词对照表.md`（新增 `FDE` / 交付阶段 /
+  `L0-L2` / 成熟度 词条）同步，并重新生成 `开始看这里.html`（自检 9 项全过）。
+- 三条被写进 README 的产品事实**逐条回源码核过**：`dsh-fde-phase/lib/phases.js`（15 阶段 + 只能 `+1`）、
+  `dsh-fde-ontology-gate/lib/classify.js`（`L0/L1/L2` 按语义载荷）、
+  `dsh-fde-memory/lib/maturity.js`（`RANK` 单调、非法值 fail-closed）。
+
+#### 顺带发现并订正的三处事实错误
+
+- **工具数是 `20` 不是 `19`**。两个独立口径对拍一致：`grep -rho "tools\.register(" dsh-fde-*/lib/ | wc -l` = **20**；
+  `docs/01-overview/project-brief.md` 那张清单表**逐行数**也是 **20**（gate 5 + dsl 2 + phase 6 + memory 7）。
+  已在 `README.md`×2、`docs/README.md`、`project-brief.md`、`user-manual.md` 共 5 处订正。
+- **8 处作者机绝对路径 → 仓库相对路径**（集中在 `dsh-fde-dsl/README.md` 与 `dsh-fde-ontology-gate/HANDOFF.md`）。
+  其中 **2 处是上一轮批量改写改坏的**混合形态（`…\tests/_x_test.mjs`，反斜杠后接正斜杠），
+  另 6 处是**既有的陈旧路径**（指向工作区根的第二份旧副本，改动前也指不到本仓库）。
+- **插件文档改动后已同步安装副本**（6 份 `.md`），`deploy:diff` 回到 `ALL_MATCH 4` / `EXIT=0`；
+  **文档不参与运行时 ⇒ 不需要重启 DSH**。
+
+> 📌 **对上面「已知未修 · 40 个活验脚本含作者本机路径」的补充**：归置后这 40 个的分布变了 ——
+> **39 个在 `tools/`、1 个在 `tests/`**（`_assert_restrict_live.mjs:53` 的 `JAR` 路径，被一个套件 import）。
+> 已核：那一处**有 `existsSync` 守卫**（`:79` 文件不存在即返回 `''`），所以在别的机器上**不会崩**，
+> 只是那条分支静默不生效 —— 与"CI 上 37 跑 + 4 跳过、0 失败"的口径一致。
 
 ---
 
@@ -164,9 +223,9 @@
 | `0014` | **D2 判据② 只验 hash 格式、从不重算** ⇒ 内容可改仍判「完整」 |
 | `0018` | preset `ptc` 遮蔽 `mode:native` ⇒ **fail-closed 变 fail-dead**（模型零工具） |
 | `0022` | 三条路径（`phase.jsonl`/`state.yaml`/`.state.lock`）**全无守卫** |
-| `0055` | `_replay_phase_audit.mjs` 遇坏 JSON **崩溃 + 零输出** ⇒ **报警能力为零** |
+| `0055` | `tools/_replay_phase_audit.mjs` 遇坏 JSON **崩溃 + 零输出** ⇒ **报警能力为零** |
 | `0066-A` | `industry:'未声明'` 不关闭 D5 ⇒ **Phase 6 推进必被拦死** |
-| `0066-B` | `_fde_d5_test.mjs` 是 **0 字节空文件** ⇒ 测试从未跑过，产物却写「PASS 9 / FAIL 0」 |
+| `0066-B` | `tests/_fde_d5_test.mjs` 是 **0 字节空文件** ⇒ 测试从未跑过，产物却写「PASS 9 / FAIL 0」 |
 | `0086` | `notes.js` 的 date 缺省用 **UTC 而非本机时区** |
 
 #### 🟠 B 级 · 判据 / 方法错（18 条，摘录）

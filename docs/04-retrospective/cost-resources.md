@@ -126,10 +126,10 @@
 | deepseek-v4-pro | 878 | 1,710,590 | 945,970 | 93,959,552 | 96,616,112 |
 | **合计** | **5,271** | **6,924,733** | **5,118,311** | **554,513,152** | **566,556,196** |
 
-**复算命令**（用仓库自带的 `_token_usage_report.mjs`，任何人跑出同样的数）：
+**复算命令**（用仓库自带的 `tools/_token_usage_report.mjs`，任何人跑出同样的数）：
 
 ```bash
-node _token_usage_report.mjs ~/.claude/projects c0be4de1 14c85869
+node tools/_token_usage_report.mjs ~/.claude/projects c0be4de1 14c85869
 ```
 
 > ✅ 上表就是这条命令的**原样输出**，**未经人工誊写**。

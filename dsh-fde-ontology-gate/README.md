@@ -299,15 +299,15 @@ patch 是顶层 YAML 数组；`- insert:` 加新行，`- id: <row>` 覆盖已有
 | 6 | ⚠️ **`str_replace_editor` 参数名已核实，但该映射是休眠代码** | 读 `@deepseek-ai/dsh-tool-str-replace-editor/lib/index.js` 确认路径参数就是 **`path`**（`args.path`）、**要求绝对路径**（`isAbsolute` 否则抛错），`guard.js` 早已映射进 `PATH_TOOLS` —— **参数名部分没问题**。<br>⚠️ **2026-09-23 更正**：本条曾写"该工具在活 DSH 中确实注册（`pluginInventory/list` 命中），该覆盖真在起作用" —— **后一句是错的**。它虽出现在 inventory 里，但状态是 `fiberPhase: null, enabled: false`；**开会话让模型自报，答"不存在 `str_replace_editor`"**（存在 `pwsh`、`read`）。即该映射**当前不生效**，属休眠代码。<br>同批实测还推翻了一条更重要的假设：**inventory 的 `enabled` 字段不是会话内可用性的判据** —— `dsh-tool-pwsh` 同样是 `enabled: false`，却在会话里**完全可用**。同字段同值，两种相反真实态 |
 | 7 | ✅ **审计标签与实际决策相反**（2026-09-23 活验发现，**已修**） | `run_code` 在 `shadow` 下**真被拦**，却记成 `shadow-deny`（该标签语义＝放行）→ **合规审计低报实际拦截量**，且无法区分「本会拦但放行」与「真拦住了」。根因：`denyRunCode` 判定在 `evaluate()` 里位于 `applySemanticRules` 提前返回**之前**（与 mode 无关），而 `pre-execute.js` 只按 `cfg.mode` 打标签。**已修**：`evaluate()` 返回 `modeIndependent`，标签与决策分支统一为 `enforcing \|\| modeIndependent`。✅ **已同步 + 已活验（2026-09-23）**：shadow 下同发纯计算 `run_code`，审计行 `decision` 已是 `deny`，回执编号变为「审计 #2」（HANDOFF §4.3） |
 | 8 | ✅ **哈希链在插件重载处断开**（2026-09-23 活验发现，**已修**） | 重载后链从 `prevHash=全零` 重启、`seq` 回到 1，日志文件里成**多条互不相连的链** → **尾部截断不可检测**，「审计 #1」有歧义。**已修**：`AuditChain` 构造时同步回读 `auditPath` 尾部 64KiB，从最后一条可解析 `{hash, seq}` 的行恢复链头与 seq（含补残尾换行），重载即续接。✅ **已同步 + 已活验（2026-09-23）**：重启 DSH 后首写即续接（`seq 1→2`、`prevHash` 精确相接，旧行为会重置为 1 + 全零）；`seq` 一路连到 5 无断点（HANDOFF §4.3） |
-| 9 | ✅ **`AuditChain` 三处硬化**（2026-09-26，**已修**，移植自 `dsh-fde-phase` 补丁 3 与 P2-3） | 本插件与 `dsh-fde-phase` 的 `lib/audit.js` **同源**，但那边的三处硬化这边一直没有，现已一并移植（详见下方「审计链三处硬化」）。<br>**① `#degraded` 排队闸**：交错失败（写 `A` 成功、写 `B` 失败、写 `C` 成功）曾导致磁盘上 `A → C`，`C.prevHash` 悬空 ⇒ 假断链；`flush()` 后还变成 `A, C, B`（**顺序反了，仍然断**）。现改为：上一条没落盘 ⇒ 后续一律排队，不抢先写。<br>**② `record()` 剥除调用方注入的 `seq`**：`{ seq: ++n, ...entry }` 的展开顺序让 `entry.seq`（哪怕是 `undefined`）覆盖自动编号 ⇒ 落盘记录**缺 seq** ⇒ 重启恢复跳过末行 ⇒ 真分叉。现改为 `const { seq, ...rest } = entry`。<br>**③ 恢复时链头与 seq 起点分两遍取**：链头只认 hash（**不强制 seq**），seq 取窗口内最大值。原实现单遍且要求 `Number.isInteger(seq) && seq > 0` ⇒ 末行缺 seq 时被跳过，链头落到上一条 ⇒ **两条记录同父**（真分叉）。<br>✅ **三项都只在失败路径 / 老格式输入上有差异** ⇒ 只需离线回归，**不需要重启活验**；三项各自独立可回退。回归见 `_audit_gate_test.mjs`（**14/0**，改前正向 7 条全红） |
+| 9 | ✅ **`AuditChain` 三处硬化**（2026-09-26，**已修**，移植自 `dsh-fde-phase` 补丁 3 与 P2-3） | 本插件与 `dsh-fde-phase` 的 `lib/audit.js` **同源**，但那边的三处硬化这边一直没有，现已一并移植（详见下方「审计链三处硬化」）。<br>**① `#degraded` 排队闸**：交错失败（写 `A` 成功、写 `B` 失败、写 `C` 成功）曾导致磁盘上 `A → C`，`C.prevHash` 悬空 ⇒ 假断链；`flush()` 后还变成 `A, C, B`（**顺序反了，仍然断**）。现改为：上一条没落盘 ⇒ 后续一律排队，不抢先写。<br>**② `record()` 剥除调用方注入的 `seq`**：`{ seq: ++n, ...entry }` 的展开顺序让 `entry.seq`（哪怕是 `undefined`）覆盖自动编号 ⇒ 落盘记录**缺 seq** ⇒ 重启恢复跳过末行 ⇒ 真分叉。现改为 `const { seq, ...rest } = entry`。<br>**③ 恢复时链头与 seq 起点分两遍取**：链头只认 hash（**不强制 seq**），seq 取窗口内最大值。原实现单遍且要求 `Number.isInteger(seq) && seq > 0` ⇒ 末行缺 seq 时被跳过，链头落到上一条 ⇒ **两条记录同父**（真分叉）。<br>✅ **三项都只在失败路径 / 老格式输入上有差异** ⇒ 只需离线回归，**不需要重启活验**；三项各自独立可回退。回归见 `tests/_audit_gate_test.mjs`（**14/0**，改前正向 7 条全红） |
 
-| 10 | 🟡 **「旧套件绿」不等于「没缺陷」（2026-09-26，写死在这里防止误读）** | `_audit_chain_test.mjs` 测的**正是本插件这份 `audit.js`**，但它的 4 个场景**从头到尾没有一次写失败** ⇒ 在「交错失败 ⇒ 假断链」「恢复跳过末行 ⇒ 真分叉」这类场景上**必然绿**。<br>⇒ **它绿不能作为"这些方面没问题"的证据**，只能说明"它没覆盖"。这三条真正的凭证是 `_audit_gate_test.mjs` 那 14 条（改前正向 7 条全红）。<br>同理：任何"某个套件全绿"的结论，都要先问**那个套件有没有真的触发失败路径**，否则就是假阴性。 |
+| 10 | 🟡 **「旧套件绿」不等于「没缺陷」（2026-09-26，写死在这里防止误读）** | `tests/_audit_chain_test.mjs` 测的**正是本插件这份 `audit.js`**，但它的 4 个场景**从头到尾没有一次写失败** ⇒ 在「交错失败 ⇒ 假断链」「恢复跳过末行 ⇒ 真分叉」这类场景上**必然绿**。<br>⇒ **它绿不能作为"这些方面没问题"的证据**，只能说明"它没覆盖"。这三条真正的凭证是 `tests/_audit_gate_test.mjs` 那 14 条（改前正向 7 条全红）。<br>同理：任何"某个套件全绿"的结论，都要先问**那个套件有没有真的触发失败路径**，否则就是假阴性。 |
 | 11 | 🟡 **C1 分级是启发式；C2 各级流程未接（2026-09-28）** | 关键词表漏报存在（字段名不命中即漏，见「变更分级」节）；本单只**记级别**、不驱动 L0/L1/L2 各自流程（重生成用例 / 回 Phase 3 / D5 评估），流程留 C2 |
 | 12 | 🔴 **影子期样本**极小**且分两段链**（2026-09-29 实测）** | 真链当前段 `shadow-deny` **0 条**（`deny 11 / allow 4 / write-probe 1`）；同目录**归档段** `gate.jsonl.2026-09-26T10-18-10-793Z` 有 `shadow-deny` **10 条**、跨度仅 **3.28 小时**（2026-09-23）。⇒ 按 §12 的「连续 7 天 + 准确率 > 80%」**当前不达标**，且**归档段不自动合并**（只作为 `warnings` 报出）。**不要**据此写"影子期没跑过" —— 跑过，在归档侧 |
 | 13 | 🔴 **enforce 的"批准"只在工具路径上硬**（2026-09-29）** | `fde_shadow_switch` 通过后才写 `mode-switch approved:true`；但**模式本身是部署层配置**（`cordis.patch.yml` 的 `mode`），插件只读 ⇒ 手改配置**结构上管不着**（与"手改 yaml 绕过 deny"同属进程内软约束边界）。本插件的兜底**只是"曝光"**：apply 期若发现 `mode: enforce` 而链上没有最新批准，记一条 `mode-switch-unattested` + 告警，**不拒绝加载、不降级**（硬降级方向是**放松**门禁，比"生效但被记一笔"更坏） |
 | 14 | 🟡 **"连续 7 天"只按跨度落地**（2026-09-29）** | 判据是**最早→最晚的跨度 ≥ 7×24h**；中间是否有空档**不参与裁决**（`maxGapDays` 只作为 `warnings` 报出）。理由：spec 没有给"最多允许空 N 天"的权威口径，**这个 N 我不编**。⇒ 交付文案不可写"已验证连续 7 天无中断" |
 | 15 | ⚠️ **`fde_shadow_status` 只读也入链** | 与 `fde_ontology_read` 同形态。口径：**只要有一类访问不落链，"完整访问史"就不成立**。⇒ 影子统计的每次查询都会给链**追加**一行 `decision:'allow'`；统计只挑 `shadow-deny`/`shadow-judged`，不受影响 |
-| 16 | ✅ **R2 逐条确认的弹窗面只由离线套件覆盖**（2026-09-29）** | 活验的合成达标链是"全部已确认"⇒ 走的是闸门 2 的 0 条分支，**没弹过窗**。弹窗语义（`allowed-once`⇒agree / `rejected`⇒disagree / **`unavailable`/`cancelled`⇒中止**）由离线 `_fde_e4_tools_test.mjs` 46 断言 + 变异 M16 钉住。<br>⚠️ 注意方向与 D4 ask **相反**：那里 `unavailable` 放行，这里`unavailable` **中止**（拿不到 FDE 的明确结论就不许把门拧到 enforce） |
+| 16 | ✅ **R2 逐条确认的弹窗面只由离线套件覆盖**（2026-09-29）** | 活验的合成达标链是"全部已确认"⇒ 走的是闸门 2 的 0 条分支，**没弹过窗**。弹窗语义（`allowed-once`⇒agree / `rejected`⇒disagree / **`unavailable`/`cancelled`⇒中止**）由离线 `tests/_fde_e4_tools_test.mjs` 46 断言 + 变异 M16 钉住。<br>⚠️ 注意方向与 D4 ask **相反**：那里 `unavailable` 放行，这里`unavailable` **中止**（拿不到 FDE 的明确结论就不许把门拧到 enforce） |
 | 17 | 🔴 **放行表的恢复只覆盖链尾 64 KiB**（2026-09-29，E1） | 与 `D1Mirror` / `AuditChain` 同一个 `TAIL_BYTES` 窗口。**窗口外的 `break-glass` 记录读不到 ⇒ 那条放行在重启后静默失效**。方向是**保守的**（少放行 = 更难绕过），但"重启后行为与重启前不同"必须让客户知道。窗口内的 `break-glass-resolved` 一定读得到（它比 open 晚），所以不会出现"已补正却被当成还开着" |
 | 18 | 🟡 **`GATE-CLASSIFY` / `GATE-PATH` 不带内容锚点**（2026-09-29，E1） | 带锚的一类（`D1`/`D3`/`D5`）在内容变化时**放行自动失效**；而 `GATE-*` 判的是**载荷语义**（分类等级 / 命中哪个保护区），**没有文件可锚** ⇒ 只按 `deny-id` 比对。内容变了、放行仍有效，这一点必须写进交付说明，不能声称"放行一律与内容绑定" |
 | 19 | 🔴 **`GATE-*` 记录一旦开出，本仓库内没有"补正"路径**（2026-09-29，E1） | 自动补正只在 phase 侧（`audit-listener.js` 的 `resolvedCandidates`），其判据是 `checks.includes(r.denyId)`，而 `checks` 只可能来自 `DENY_CHECKS`∩`IMPLEMENTED` = `D1/D2/D3/D5` ⇒ **`GATE-*` 永远不在候选里**。`fde-break-glass` 也只开不补。⇒ `GATE-*` 放行的**唯一**收口方式 = 人工（改 `memory/break-glass.json` / 追加链记录）。这是设计取舍（`GATE-*` 在 gate 插件里，phase 复算不了），不是遗漏，但它必须可见 |
@@ -315,12 +315,12 @@ patch 是顶层 YAML 数组；`- insert:` 加新行，`- id: <row>` 覆盖已有
 
 | 21 | 🔴 **路径兜底只看**键名**，表外的键一律扫不到（2026-09-29 核，**既有缺口**，早于 E2） | `guard.js` 的 `collectCandidates` 按 `KNOWN_PATH_KEYS[exec.name] ?? GENERIC_PATH_KEYS` 取**键名表**，再只读这几个键的值。`GENERIC_PATH_KEYS` 是 `path / file_path / filePath / filepath / file / target / target_path / targetPath / directory / dir` **十个** —— **不含 `name`**，也不含任何"自定义键"。<br>⇒ 一个**未在 `KNOWN_PATH_KEYS` 里**的工具，若把路径放在表外的键上（`name` / `src` / `dest` …），其路径**不被扫描 ⇒ 不拦、也不落审计**（留痕那一条同样依赖 `collectCandidates`，见 P1-3）。<br>**⚠️ 边界（别高估它）**：真实 DSH 的 `read` / `write` / `edit` / `read_image` / `str_replace_editor` 都在 `KNOWN_PATH_KEYS` 里**被精确覆盖**；带 `command` 字段的 shell 类调用另有专项兜法（`shellPathTokens`）。⇒ 这条要**装上第三方插件**、且其路径参数名恰好落在表外才可触发。<br>**为什么现在写下来**：E2 新增的 `fde_experiment_write` 参数名**正是 `name`** —— 这证明"`name` 当路径键名"不是臆想出来的假设，是真实工具里就在用的形态（它本身落在沙箱豁免区内，不存在"该拦而漏拦"）。本条性质是**偏松**（漏拦），没有 fail-closed 那种天然的保守性 |
 | 22 | 🔴 **历史 deny 记录**没有 `denyId` ⇒ ① 只能弱配对**（2026-09-29，E5） | `denyId` 是 E5 期才补进 `pre-execute.js` 的 deny 记录里的（**只增字段**，历史行仍是旧形态）。⇒ 读侧必须把"缺 `denyId`"当**独立一档**：这类 deny 只能按**工具名**弱配对"后续是否被绕过/修复"，同工具的不同 deny 会互相串。实现里按 `hasId` 分强/弱两档，弱配对**单列计数**并把 `confidence` 降档 —— **不许静默当成强配对**。另：`fde_ontology_write` 的 allow 记录早期也没有 `level` 字段，见 #26 |
-| 23 | 🔴 **两项指标在实现期各踩过一个"假证据"坑（2026-09-29，E5，已修）** | **① ③ 的分母选错**：先写成"只给有变更的 Phase 建行"⇒ 零变更时塌成 `insufficient-data`。实测症状最刺眼：**链上有 16 条 `phase-advance` 却报"无数据"**。修法 = 先按 Phase 段播种、分母取**段数**。**② ⑤ 用了恒真判据**：`ratioVerdict(sum14, 1, …)` 的分母恒为 1 ⇒ **永远不可能红**（`X == Y` 型恒真式），还会在无配对段时假报"0 天 + ok"。修法 = 新增 `absoluteVerdict(value, hasData, …)`，`hasData` 为假即报缺席。⇒ 两条都写进 `_fde_e5_test.mjs` 的**具名断言**（D2 / F3）并用变异钉住（M9 / M2） |
+| 23 | 🔴 **两项指标在实现期各踩过一个"假证据"坑（2026-09-29，E5，已修）** | **① ③ 的分母选错**：先写成"只给有变更的 Phase 建行"⇒ 零变更时塌成 `insufficient-data`。实测症状最刺眼：**链上有 16 条 `phase-advance` 却报"无数据"**。修法 = 先按 Phase 段播种、分母取**段数**。**② ⑤ 用了恒真判据**：`ratioVerdict(sum14, 1, …)` 的分母恒为 1 ⇒ **永远不可能红**（`X == Y` 型恒真式），还会在无配对段时假报"0 天 + ok"。修法 = 新增 `absoluteVerdict(value, hasData, …)`，`hasData` 为假即报缺席。⇒ 两条都写进 `tests/_fde_e5_test.mjs` 的**具名断言**（D2 / F3）并用变异钉住（M9 / M2） |
 | 24 | 🟡 **`degraded` 是合并档：`cancelled` 与 `unavailable` 拆不开**（2026-09-29，E5） | ④ 的跳过率把 `degraded` 计为跳过，但源记录里 `cancelled`（FDE 撤回）与 `unavailable`（没有 answerer）**已经合并**成一个值（`dsh-fde-phase/lib/tools.js:268` 的 `d4Approval = d4 === 'allowed-once' ? 'confirmed' : 'degraded'`，D5-pre 同形在 `:315`；`:274`/`:341` 的 `outcome:` 已是合并后的值）。⇒ 本指标**无法**分列这两者（设计时曾打算分列，实测数据源不支持）。这是**数据源的粒度**决定的，不是统计口径的选择；要拆必须先改 phase 侧的写侧 |
 | 25 | 🟡 **`phaseAuditPath` 缺省是"能起但三项无数据"**（2026-09-29，E5） | 与 `dsh-fde-phase` 的 `gateAuditPath`（缺 ⇒ **抛错、插件加载失败**）**刻意不对称**：它只是只读指标的数据源、不参与任何拦截判定，缺它只让 ③④⑤ 报 `insufficient-data`（**不是 0%**）。✔ 理由：为一个**报表项**让整个门禁插件起不来，方向是拿合规能力换报表能力。⚠️ 代价写在这里：**部署时忘了配它，症状是"三项静默无数据"**，只有启动日志那一行（已加）能一眼分辨"真没数据"与"路径配错了" |
 | 26 | 🟡 **③ 的 `noLevel` 是下界，真值是上界**（2026-09-29，E5） | 老版本写的 `fde_ontology_write` allow 记录**没有 `level` 字段**（真链 seq 4/5）。实现里**全收**、单列 `noLevel` 桶、**不计入** L0+L1（判不出级别就不猜），并在 `note` 里写明"`value` 是**下界**，真值上界为 X 次/Phase"，`confidence` 降为 `proxy`。⚠️ 交付文案不可写"Phase 4 变更已精确计数" |
 | 27 | 🟡 **⑤ 的口径在 spec 内部就不一致**（2026-09-29，E5） | 指标**定义**写的是"日历天数"，**推翻条件**写的是"工作日"（> 15）。本实现取**日历天**，理由是它与数据源（审计链的 `ts` 差值）可直接计算、不需节假日表；方向**偏红**（日历天 ≥ 工作日 ⇒ 更容易触发"流程过重"）。⚠️ 这不是实现口径选择，是**spec 自身的矛盾**，故在 `note` 里逐字写出，**不假装已按 spec 统一**。同批：③ 的"变更"只数 L0+L1（L2 是否计入 spec 未明说）、① 的"修复"只认两个写通道 —— 都是我们**声明过的 proxy**，不是 spec 的原文 |
-| 28 | 🟡 **测试套件的崩溃兜底会丢后续断言**（2026-09-29，E5） | `_fde_e5_test.mjs` 装了 `uncaughtException` 兜底，目的是**保住整份报告**（崩溃一次会让所有断言结果消失，本项目实测过）。⚠️ 代价：崩溃点**之后**的断言不会继续跑，报告里它们**缺席**而不是"红"。⇒ 读报告时要看**断言条数**是否等于 **63**（2026-09-29 加 F5b 后，原为 62），少于 63 就是中途崩过，不能只看"失败 0" |
+| 28 | 🟡 **测试套件的崩溃兜底会丢后续断言**（2026-09-29，E5） | `tests/_fde_e5_test.mjs` 装了 `uncaughtException` 兜底，目的是**保住整份报告**（崩溃一次会让所有断言结果消失，本项目实测过）。⚠️ 代价：崩溃点**之后**的断言不会继续跑，报告里它们**缺席**而不是"红"。⇒ 读报告时要看**断言条数**是否等于 **63**（2026-09-29 加 F5b 后，原为 62），少于 63 就是中途崩过，不能只看"失败 0" |
 | 29 | 🔴 **⑤ 的链尾是"按链推断"，不是"当前 Phase"**（2026-09-29，第五层活验发现） | 权威是 `<projectRoot>/memory/state.yaml` 的 `current_phase`，而它**会被手工 seed/restore**（活验常用手段，不留链记录，且按既有纪律保留 `revision`/`updated_at` ⇒ 时间戳也看不出动过）。实测本机：链尾 **Phase 3** 而 `state.yaml` **Phase 10**（seq 88/93/96/99 的 `2→3` 每次成功、被紧随的 `restrict-lifted phase:"3"` 证明，随后又被 re-seed 回 10）。⇒ 字段名从 `inProgress` 改为 **`chainTail`**：旧名在**断言**"现在正处在这个阶段"，而 `computePhaseDwell` 只读链、读不到 `state.yaml`。F5b 用**双向**断言钉住（必须不含旧名 + note 必须含"权威是 state.yaml"），M21/M22 各打一个方向。⚠️ **推论**：凡是只读链推断"当前状态"的判据都受同一限制，要报"现在"必须去读 `state.yaml` |
 
 > 全部 API 契约的离线类型核实结果见 **[VERIFICATION.md](./VERIFICATION.md)** —— 插件加载不会因 API 签名失真而崩溃。
@@ -401,7 +401,7 @@ DSH 的信任模型是：第三方插件运行在**核心 Node 进程内**，沙
 
 **⚠️ 判空不是可有可无的防御**：`auditPath` 留空（`''`，PoC 默认"只驻内存不落盘"）时
 `dirname('') === '.'` ⇒ 若把 `.` 当保护根，进程 cwd 内**一切写都被拒**。本实现显式跳过空串
-（回归用例见 `_gate_audit_guard_test.mjs` 的「auditPath 为空串」那条）。
+（回归用例见 `tests/_gate_audit_guard_test.mjs` 的「auditPath 为空串」那条）。
 
 **固有边界（别把它读成"从此万无一失"）**：`collectCandidates()` 是从参数/命令串里**提路径 token**
 的启发式（两条兜法见 `guard.js` 的 `shellPathTokens`）。像
@@ -446,7 +446,7 @@ DSH 的信任模型是：第三方插件运行在**核心 Node 进程内**，沙
 | 审计链目录 | ❌ 无 | 不接受任何直接读与写 —— 写入伪造留痕，**读取同样被拒**（守卫对读写不作区分） |
 | 额外受保护目录 | ❌ 无 | 不接受任何直接读与写，也没有专用工具通道（**不提** `fde_ontology_*`，否定句式也会诱导模型去试） |
 
-回归用例见 `_gate_audit_guard_test.mjs` E 组：三条 `read` 打三类路径，
+回归用例见 `tests/_gate_audit_guard_test.mjs` E 组：三条 `read` 打三类路径，
 断言理由**不含「直写」**且**明确覆盖「读」**。
 
 ### 探索沙箱豁免：`sandboxSubdirs`（2026-09-29 / E2，spec v3 §7）
@@ -482,18 +482,18 @@ spec §7 要求一个**探索沙箱**：模型在里面自由试 ontology 草稿
 
 **★ 跨插件字面量对拍**：`'experiments'` 在**两处**出现 —— 本插件的部署配置
 `cordis.patch.yml` 与 `dsh-fde-memory/lib/experiments.js` 的 `EXPERIMENTS_SUBDIR`
-（跨插件不 import，只能照抄）。`_fde_e2_test.mjs` 有一条断言**直接读部署配置与源码常量对拍**，
+（跨插件不 import，只能照抄）。`tests/_fde_e2_test.mjs` 有一条断言**直接读部署配置与源码常量对拍**，
 改一处不改另一处会当场红。同理还有一条对拍 `protectedExtraRoots[0]`。
 
 **⚠️ 沙箱只豁免 guard 的**路径兜底**那一段**。「谁能在什么条件下改 ontology」的语义判定
 （`fde_ontology_write` 的 source/confidence/越界检查）**一字未动** ——
 沙箱是"允许直连文件系统写草稿"，不是"绕过 ontology 门禁"。
 
-**⚠️ 诚实的代价（写下来，别当成没有）**：`_fde_e2_test.mjs` **不 import `lib/config.js`** ——
+**⚠️ 诚实的代价（写下来，别当成没有）**：`tests/_fde_e2_test.mjs` **不 import `lib/config.js`** ——
 `config.js` import `@deepseek-ai/schemastery`，而离线工作区没有该桩（只有 `dsh-tools` /
 `dsh-llm`），import 它会让**整个模块加载失败、报告零产出**。代价用两条断言补：
 **F3** grep `config.js` 确认 `normalizeConfig` 真的调了两个沙箱校验（静态断言，
-可被 `_fde_e2_mut.mjs` 的 M9 变异证伪）；**F4** 断言手写 cfg 覆盖 `guard.js` / `paths.js`
+可被 `tests/_fde_e2_mut.mjs` 的 M9 变异证伪）；**F4** 断言手写 cfg 覆盖 `guard.js` / `paths.js`
 读到的**每一个** `cfg.*` 字段（防"手写 cfg 少一个字段 ⇒ 测试测的是另一个形状"）。
 ⇒ **这条代价是"补丁过的"，不是"绕过去的"；但它终究不是直接跑真 config.js**，如实记在这里。
 
@@ -549,7 +549,7 @@ spec §7 要求一个**探索沙箱**：模型在里面自由试 ontology 草稿
 
 **为什么闸门 1 必须在闸门 2 之前**：真环境影子期数据不足，反过来的话 FDE 会先答完
 所有历史项、再被告知"跨度不够" —— 白打扰，而且会让人以为"多答几次就能切"。活验断言
-**弹窗次数 = 0**（`_fde_e4_live.mjs`）。
+**弹窗次数 = 0**（`tools/_fde_e4_live.mjs`）。
 
 **为什么闸门 3 非要重读磁盘**：`audit.record()` 是 **fail-open** 的（写盘失败进内存 outbox、
 不抛错）⇒ 只信内存里的计数，会在"确认根本没落盘"的情况下批准切换。
@@ -574,10 +574,10 @@ D4 是"放行前问一声"，拿不到回答时放行是安全的；这里是"�
 
 | 层 | 内容 | 结果 |
 |---|---|---|
-| 离线纯函数 | `_fde_e4_test.mjs`（缺席分档 / 窗口 / 阈值边界 / 标注归并 / 不变量） | **40/40** |
-| 离线工具 | `_fde_e4_tools_test.mjs`（注册面 / 闸门顺序 / R2 逐条 / 逃生 / 凭据 / 真链坏行） | **46/46** |
-| 变异注入 | `_fde_e4_mut.mjs`（20 条，逐条要求**具名断言**抓住） | **RED 20 / GREEN 0 / INVALID 0** |
-| 真 SDK + 真数据 | `_fde_e4_live.mjs`（含 defineTool **负向对照**） | **12/12** |
+| 离线纯函数 | `tests/_fde_e4_test.mjs`（缺席分档 / 窗口 / 阈值边界 / 标注归并 / 不变量） | **40/40** |
+| 离线工具 | `tests/_fde_e4_tools_test.mjs`（注册面 / 闸门顺序 / R2 逐条 / 逃生 / 凭据 / 真链坏行） | **46/46** |
+| 变异注入 | `tools/_fde_e4_mut.mjs`（20 条，逐条要求**具名断言**抓住） | **RED 20 / GREEN 0 / INVALID 0** |
+| 真 SDK + 真数据 | `tools/_fde_e4_live.mjs`（含 defineTool **负向对照**） | **12/12** |
 | ✅ **第五层：进程内注册 + 调用** | 重启 DSH 后：① `pluginInventory/list` ⇒ 插件 `fiberPhase=active`；② 新会话 `request/header` 的**工具名清单**；③ 模型**实际调用** | **已验（2026-09-29）** |
 
 🔴 **第五层的判据是 `request/header` 事件里的工具名清单，不是 `pluginInventory/list`。**
@@ -692,10 +692,10 @@ gate 侧缺 `phaseAuditPath` ⇒ **留空也能起**。理由：它是**只读�
 
 | 层 | 内容 | 结果 |
 |---|---|---|
-| 离线纯函数 + 工具 + 跨包对拍 | `_fde_e5_test.mjs`（红线 / 六项 / 边界 / 工具层 / 与 phase 的字面量对拍） | **62/62，EXIT=0** |
-| 变异注入 | `_fde_e5_mut.mjs`（20 条，逐条要求**具名断言**抓住） | **红 20 / 绿 0 / 无效 0** |
-| 源↔副本 | `_deploy_diff.mjs` | **20 文件 ALL_MATCH** |
-| 全量回归 | `_run_all_tests.sh` | **41 套件 ALL-TESTS-GREEN** |
+| 离线纯函数 + 工具 + 跨包对拍 | `tests/_fde_e5_test.mjs`（红线 / 六项 / 边界 / 工具层 / 与 phase 的字面量对拍） | **62/62，EXIT=0** |
+| 变异注入 | `tests/_fde_e5_mut.mjs`（20 条，逐条要求**具名断言**抓住） | **红 20 / 绿 0 / 无效 0** |
+| 源↔副本 | `tests/_deploy_diff.mjs` | **20 文件 ALL_MATCH** |
+| 全量回归 | `tests/_run_all_tests.sh` | **41 套件 ALL-TESTS-GREEN** |
 | ⏳ **第五层：活体** | 重启 DSH 后 `request/header` **逐名 diff** 应新增 `fde_metrics`；再让模型实调一次 | **待验** |
 
 ⚠️ 变异验证不是走过场：首轮实跑是 **红 17 / 绿 2 / 无效 1**，三条问题各有各的教训 ——
@@ -782,20 +782,20 @@ if (!BYPASSABLE_DENY_IDS.includes(denyId)) return false
 本批首次落地全部六项 + 六条推翻条件。红线：**分母 0 报 `insufficient-data`，绝不报 0%**
 （`0 < 30%` 当场为真 ⇒ 一条从未被观测的指标会直接触发推翻结论）。
 
-证据（离线四层）：`_fde_e5_test.mjs` **62/62 EXIT=0** ｜ `_fde_e5_mut.mjs` **红 20 / 绿 0 / 无效 0**
-（首轮 17/2/1，含一条崩溃型无效变异 + 两条等价变异，均已重做）｜ `_deploy_diff.mjs` **20 文件 ALL_MATCH**
-｜ `_run_all_tests.sh` **41 套件 ALL-TESTS-GREEN**。⏳ 第五层（活体逐名 diff + 实调）**待重启后验**。
+证据（离线四层）：`tests/_fde_e5_test.mjs` **62/62 EXIT=0** ｜ `tests/_fde_e5_mut.mjs` **红 20 / 绿 0 / 无效 0**
+（首轮 17/2/1，含一条崩溃型无效变异 + 两条等价变异，均已重做）｜ `tests/_deploy_diff.mjs` **20 文件 ALL_MATCH**
+｜ `tests/_run_all_tests.sh` **41 套件 ALL-TESTS-GREEN**。⏳ 第五层（活体逐名 diff + 实调）**待重启后验**。
 
 **2026-09-29 第五层活验（重启后）** —— 三项全过 + 一项修：
-- ① `_alive.mjs`：四个 FDE 插件 `fiberPhase:"active"`、`enabled:true`、153 条目、非 active 0 个。
-- ② `_e5_header_diff.mjs` **PASS**：重启前 40 工具 → 重启后 45；🔻消失 **0**；🔺新增恰为
+- ① `tools/_alive.mjs`：四个 FDE 插件 `fiberPhase:"active"`、`enabled:true`、153 条目、非 active 0 个。
+- ② `tools/_e5_header_diff.mjs` **PASS**：重启前 40 工具 → 重启后 45；🔻消失 **0**；🔺新增恰为
   `fde-break-glass` / `fde_experiment_{write,read,list}` / `fde_metrics`；算术 40+5-0=45 ✓。
 - ③ 模型实调 `fde_metrics` → `ok`，真链**零污染**（22 → 23 行，新增恰 1 行 allow）。
 - 🔴 **④ 第五层抓出一个真缺陷并已修**：`phase-dwell` 报 `insufficient-data` 是**对的**
   （离线复算 11 处"推进不连续"逐条吻合：`11≠6` / `7≠4` / `5≠6` …，确无一对落在 Phase 1–4），
   但 `buckets.inProgress` 把**链上推断**说成了**当前事实**（链尾 Phase 3，而 `state.yaml` 是 Phase 10）。
   修法 = 改名 `chainTail` + note 写明权威是 `state.yaml`（见诚实清单 #29）。该修复**离线**验证：
-  `_fde_e5_test.mjs` **63/63 EXIT=0**（新增 F5b）｜ `_fde_e5_mut.mjs` **红 22 / 绿 0 / 无效 0**（新增 M21/M22）。
+  `tests/_fde_e5_test.mjs` **63/63 EXIT=0**（新增 F5b）｜ `tests/_fde_e5_mut.mjs` **红 22 / 绿 0 / 无效 0**（新增 M21/M22）。
   ⚠️ **`chainTail` 这个新名字本身尚未在活体上跑过** —— 重启时装的是改名前的副本，活体返回的仍是 `inProgress`
   （值与逻辑完全相同，只差字段名）。
 
@@ -815,14 +815,14 @@ if (!BYPASSABLE_DENY_IDS.includes(denyId)) return false
 三个 deny 站点、break-glass 放行表全部照旧 —— 沙箱只豁免 guard 的**路径兜底**那一段。
 `pre-execute.js` **没有改**（`import { evaluate } from './guard.js'` ⇒ 自动继承）。
 
-**证据**：`_fde_e2_test.mjs` **41 断言 / 通过 41 / 失败 0 / EXIT=0**；
-`_fde_e2_mut.mjs` **红 10 / 绿 0 / 无效 0**，每条变异 exit=1、收尾 sha256 逐字还原（PASS）。
+**证据**：`tests/_fde_e2_test.mjs` **41 断言 / 通过 41 / 失败 0 / EXIT=0**；
+`tests/_fde_e2_mut.mjs` **红 10 / 绿 0 / 无效 0**，每条变异 exit=1、收尾 sha256 逐字还原（PASS）。
 变异目标是**工作区源码**（测试 import 的就是它），覆盖：派生源换 `ontologyRoot`、
 删 guard 沙箱过滤、放开单段校验、短路"压在别的保护根"检查、不拒 `..` 段、
 不查符号链接、沙箱写入落审计、打印不显示沙箱、删 `normalizeConfig` 里的校验调用、
 去掉大小上限。
 
-**⚠️ 离线套件的一个代价（补丁过，不是绕过）**：`_fde_e2_test.mjs` **不 import `lib/config.js`**
+**⚠️ 离线套件的一个代价（补丁过，不是绕过）**：`tests/_fde_e2_test.mjs` **不 import `lib/config.js`**
 （它 import `@deepseek-ai/schemastery`，离线工作区无该桩 ⇒ 整个模块加载失败、报告零产出）。
 代价由 F3（grep 确认 `normalizeConfig` 真调了两个校验，M9 可证伪）+ F4（断言手写 cfg
 覆盖 `guard.js`/`paths.js` 读到的每个 `cfg.*`）补 —— 详见「探索沙箱豁免」节末。
@@ -832,7 +832,7 @@ if (!BYPASSABLE_DENY_IDS.includes(denyId)) return false
 ### 2026-09-29：break-glass 逃生门（E1，spec v3 §11）
 
 **gate 侧只消费**：新增 `lib/deny-ids.js` 与 `lib/bg-mirror.js`（**逐字照抄** `dsh-fde-phase`
-的同名文件 —— 跨包不能 import，一致性由 `_fde_e1_crosspkg_test.mjs` 用 sha256 逐字对拍）；
+的同名文件 —— 跨包不能 import，一致性由 `tests/_fde_e1_crosspkg_test.mjs` 用 sha256 逐字对拍）；
 `lib/audit.js` 导出 `TAIL_BYTES`（让两边同源，不再有第三份魔数拷贝）；`lib/guard.js` 拆出
 `evaluateRules`（纯规则）与 `evaluate`（规则 + 放行表），三个 deny 站点补上 `denyId`；
 `lib/pre-execute.js` 加 `break-glass-bypass` 留痕；`lib/index.js` 装配 `restoreSync` +
@@ -841,10 +841,10 @@ if (!BYPASSABLE_DENY_IDS.includes(denyId)) return false
 🔴 **实现期间抓出的真缺陷**：`isBypassed` 原先只查表内容，硬塞 `GATE-PTC` 即可绕过（见上节）。
 已修（消费侧短路），并新增直接断言覆盖 `GATE-PTC` / `RULE-JUMP` / `RULE-LAST` / `RULE-OBSERVATION` / `D9` / 空串。
 
-四层验证：离线 `_fde_e1_test.mjs` 62/62、跨包对拍 `_fde_e1_crosspkg_test.mjs` 7/7、
-变异 `_fde_e1_mut.mjs` **20 条全被抓**（RED 20 / GREEN 0 / INVALID 0）、
-接线 `_fde_e1_wiring_test.mjs` 19/19（**import 部署副本**，覆盖"重启后从自己链恢复出放行"
-这条端到端主张，并由 `_fde_e1_wiring_mut.mjs` 的 6 条变异逐条证明会红）。
+四层验证：离线 `tests/_fde_e1_test.mjs` 62/62、跨包对拍 `tests/_fde_e1_crosspkg_test.mjs` 7/7、
+变异 `tools/_fde_e1_mut.mjs` **20 条全被抓**（RED 20 / GREEN 0 / INVALID 0）、
+接线 `tests/_fde_e1_wiring_test.mjs` 19/19（**import 部署副本**，覆盖"重启后从自己链恢复出放行"
+这条端到端主张，并由 `tools/_fde_e1_wiring_mut.mjs` 的 6 条变异逐条证明会红）。
 诚实缺口见上方表 **#17–#20**。
 
 ### 2026-09-29：影子模式与 enforce 准入门（E4，spec v3 §12/§14）
@@ -870,7 +870,7 @@ if (!BYPASSABLE_DENY_IDS.includes(denyId)) return false
 `lib/ontology-parse.js`（照抄 dsl 的 YAML 子集解析器 + 轻量结构提取，fail-closed）；`config.js` 加
 `industry` 字段；`tools.js` 的 `fde_ontology_write` 读旧内容做 diff、自动判级、手动只能升级不能降级
 （降级拒绝 `LEVEL_DOWNGRADE_DENIED`）、审计带 `level/added/modified/deleted`。
-离线回归 `_fde_classify_test.mjs` **16/16** + `_fde_classify_exec_test.mjs` **3/3**，两套件 `FDE_INVERT=1` 均 exit 1。
+离线回归 `tests/_fde_classify_test.mjs` **16/16** + `tests/_fde_classify_exec_test.mjs` **3/3**，两套件 `FDE_INVERT=1` 均 exit 1。
 活验（2026-09-28 重启后）：4 个 fde 插件 `fiberPhase:active`、`failed 0`；`fde_ontology_write` 的
 `parameters` 已带 `level`（enum L0/L1/L2）。端到端验「降级拒绝」：真实调用传 `level:L0` 写 deny 规则
 → 自动判 L2（本部署 `logic.yaml` 有残留规则，删除触临床，语义正确）→ 拒绝
@@ -896,7 +896,7 @@ if (!BYPASSABLE_DENY_IDS.includes(denyId)) return false
 - `audit` / `extra`：无任何通道 ⇒ 「不接受任何直接读与写」，且 `audit` 明说"**读取同样被拒**（守卫对读写不作区分）"；
 - `extra` 依旧**不提** `fde_ontology_*`（否定句式也会诱导模型去试）。
 
-**回归**：`_gate_audit_guard_test.mjs` E 组新增 14 条（改前 **58 通过 / 7 失败** ⇒ 改后 **65 / 0**），
+**回归**：`tests/_gate_audit_guard_test.mjs` E 组新增 14 条（改前 **58 通过 / 7 失败** ⇒ 改后 **65 / 0**），
 其中三条用 `read` 形状的 exec（`KNOWN_PATH_KEYS.read = ['file_path']`）断言理由
 **不含「直写」**且**含「读」**；另有一条前提断言（"read 确实被拒"）——
 它先红了一次，暴露的正是我第一版夹具把参数键写成 `path` 导致的**空过**风险。
@@ -918,16 +918,16 @@ if (!BYPASSABLE_DENY_IDS.includes(denyId)) return false
 3. **`lib/index.js`**：启动打印改调 `formatProtectedRootsLine()` —— 这正是 0024 §6 那条
    "打印对不对没人验过"的处置：**提成可离线断言的函数**，而不是一句 `join(' | ')`。
 4. ⚠️ `extra` 的 note **刻意不提** `fde_ontology_*` 的名字（哪怕是否定句式）—— 写出来会让模型去试。
-5. 回归：`_gate_audit_guard_test.mjs` 新增 D 组 16 条（**改前 38 通过 / 13 失败**，改后 **51/0**）。
+5. 回归：`tests/_gate_audit_guard_test.mjs` 新增 D 组 16 条（**改前 38 通过 / 13 失败**，改后 **51/0**）。
    其中两条是**反向**断言：命中 ontology 时理由**不得**出现"审计链目录"、命中审计目录时
    **不得**出现 `fde_ontology_read`（改前两条都红 ⇒ 证明确有"串台"）。
 
-### 2026-09-27：`_probe_yaml_anchor.mjs` 提升为**部署前 smoke check**（0024 P1-6）
+### 2026-09-27：`tools/_probe_yaml_anchor.mjs` 提升为**部署前 smoke check**（0024 P1-6）
 
 退出码敏感（`0` 通过 / `1` 失败），**部署前跑一次**：
 
 ```bash
-node _probe_yaml_anchor.mjs
+node tools/_probe_yaml_anchor.mjs
 ```
 
 检查四项：① 用 DSH 自家的 `js-yaml` + `JSON_SCHEMA.extend(!!js)` 解析得通；② gate 条目在
@@ -950,7 +950,7 @@ phase 条目**之前**（锚必须在别名之前，否则 boot 抛 `unidentifie
 4. **`lib/index.js`**（P0-6）：启动期打印**生效的**受保护根列表（shadow 下附带"不拦"警示）
    ⇒ 配置漂移**可见**而非静默。
 5. **`lib/pre-execute.js`**：`（审计 #N）` → `（gate 审计 #N）`；phase 侧同步改为 `（phase 审计 #N）`。
-6. 回归：`_gate_audit_guard_test.mjs` 新增 C 组 13 条（**改前 27 通过 / 7 失败**，改后 **34/0**）；
+6. 回归：`tests/_gate_audit_guard_test.mjs` 新增 C 组 13 条（**改前 27 通过 / 7 失败**，改后 **34/0**）；
    全矩阵仍 **16 套件 × 2 轮全过**。
 7. ⚠️ 未完成面：`protectedExtraRoots` **需要活体配置填值才生效**（见"配置即生效面"）。
 
@@ -963,8 +963,8 @@ phase 条目**之前**（锚必须在别名之前，否则 boot 抛 `unidentifie
    （`:109-128`）的 `probe` 范式补写侧留痕 —— `resolveWithinOntology()` 抛错时**先落痕再抛原错**，
    判定语义与错误文案**一字不改**。此前越界写**零留痕**（`audit.record` 排在写文件之后，
    抛错就中断），而"留痕即失效"是本项目自己的口径。
-3. 回归：`_gate_audit_guard_test.mjs`（新增，21 条；改前 14 通过/**7 失败**，改后 21/0）。
-4. 顺带修一个**既有**缺口：`_gate_mode_test.mjs` 此前**不响应** `FDE_INVERT`（INVERT 轮它 exit=0）
+3. 回归：`tests/_gate_audit_guard_test.mjs`（新增，21 条；改前 14 通过/**7 失败**，改后 21/0）。
+4. 顺带修一个**既有**缺口：`tests/_gate_mode_test.mjs` 此前**不响应** `FDE_INVERT`（INVERT 轮它 exit=0）
    ⇒ 它绿了不可证伪。已补钩子。全矩阵现为 **16/16 两轮全过**。
 
 ### 2026-09-26：重算审计链时，`record` 里**不含** `prevHash` / `hash`（易错点，已有人踩）
@@ -996,9 +996,9 @@ sha256(rest.prevHash + '\n' + JSON.stringify(rest))
 **两个插件的 `audit.js` 同源但已经分叉**，这是把它们重新对齐的一步（有意保留的差异见「诚实清单」#9 后的对照表）。
 
 **为什么没做活验**：三项都只在**失败路径**或**老格式输入**上有差异，正常路径零行为差异
-（`_audit_chain_test.mjs` 的四条场景改动前后全绿即为证）。按第四批起的纪律，正常路径无差异 ⇒ 不开窗口。
+（`tests/_audit_chain_test.mjs` 的四条场景改动前后全绿即为证）。按第四批起的纪律，正常路径无差异 ⇒ 不开窗口。
 
-**证据**：新增 `_audit_gate_test.mjs`，**改前正向 7 条全红（7 通/7 红）→ 改后 14/0**；
+**证据**：新增 `tests/_audit_gate_test.mjs`，**改前正向 7 条全红（7 通/7 红）→ 改后 14/0**；
 `FDE_INVERT=1` exit 1；反向 5 条（§4）改前就绿 = 防改过头的护栏。
 12 套全套矩阵部署前后均 `normal=0 / invert=1`。
 
@@ -1016,7 +1016,7 @@ sha256(rest.prevHash + '\n' + JSON.stringify(rest))
 为什么不写成 `deny`：它**没拦任何东西**（当初本来就直接抛错返回了）。
 写成 deny 会把"模型自己失败的探测"记成"门禁的拦截"，污染 enforcer 语义 —— 它是**访问史**，不是判定。
 
-**证据**：新增回归 `_gate_readprobe_test.mjs`（15/15 全绿），既验留痕，也验"判定语义没被改动"
+**证据**：新增回归 `tests/_gate_readprobe_test.mjs`（15/15 全绿），既验留痕，也验"判定语义没被改动"
 （错误类型 / 文案 / allow 计数都不变），并验哈希链仍连续、`read-probe` 不冒充 deny。
 
 ✅ **已上线并活验通过（2026-09-24 18:25 重启后，PID 17172）**：一句自然请求触发模型探 6 个文件名 →

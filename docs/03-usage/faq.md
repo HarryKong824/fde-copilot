@@ -126,7 +126,7 @@ condition: {'>': [{'var': 'treatment.dose_mg'}, 100]}
 
 **正确命令**：
 ```bash
-node _replay_phase_audit.mjs    # 期望：断链 0 处 / CHAIN-INTACT
+node tools/_replay_phase_audit.mjs    # 期望：断链 0 处 / CHAIN-INTACT
 ```
 
 ---
@@ -148,7 +148,7 @@ linkHash(row.prevHash, { seq: row.seq, type: row.type, ... })
 
 ---
 
-### B3. `_deploy_diff.mjs` 报 `HAS-DIFF`，但我只改了 README？
+### B3. `tests/_deploy_diff.mjs` 报 `HAS-DIFF`，但我只改了 README？
 
 **那正是原因——`README.md` 也在对拍域内。**
 
@@ -190,16 +190,16 @@ linkHash(row.prevHash, { seq: row.seq, type: row.type, ... })
 
 ```bash
 # ① 脚本字节数（⚠️ 别用 wc -l：无换行符的文件也报 0）
-ls -la _fde_d5_test.mjs
+ls -la tests/_fde_d5_test.mjs
 
 # ② 看它自己的产物文件
 ```
 
-**真实教训**：`_fde_d5_test.mjs` 曾是 **0 字节**，而跑一个空程序 `node` 必然 **零断言 + EXIT=0** ⇒ 产物文件里写着「PASS 9 / FAIL 0」，**却从未真跑过**。
+**真实教训**：`tests/_fde_d5_test.mjs` 曾是 **0 字节**，而跑一个空程序 `node` 必然 **零断言 + EXIT=0** ⇒ 产物文件里写着「PASS 9 / FAIL 0」，**却从未真跑过**。
 
 > ⚠️ **结果文件不能自证「测试跑过」**。「跑过」要三件套：**脚本字节数** + **当场重跑** + **退出码**。
 >
-> ⚠️ `_run_all_tests.sh` 已内置防护：脚本 **< 400 字节即预警**。
+> ⚠️ `tests/_run_all_tests.sh` 已内置防护：脚本 **< 400 字节即预警**。
 
 ---
 

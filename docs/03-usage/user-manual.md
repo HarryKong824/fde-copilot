@@ -70,7 +70,7 @@
 
 > **「列出你现在能用的所有 fde 开头的工具」**
 
-**期望**：AI 报出 19 个工具（`fde_ontology_write`、`fde_phase_advance`、`fde-run-validation` 等）。
+**期望**：AI 报出 20 个工具（`fde_ontology_write`、`fde_phase_advance`、`fde-run-validation` 等）。
 
 **如果只有一部分**：可能是**当前阶段隐藏了某些工具**（见 §5.3），这是正常设计。
 

@@ -21,7 +21,7 @@ AI 的默认行为是报喜 —— 不明确写出来，不确定的部分就会
 
 ```bash
 # 命令
-$ bash _run_all_tests.sh
+$ bash tests/_run_all_tests.sh
 
 # 输出（贴关键行）
 共 41 个套件；已跑 37；跳过 4（白名单内，需本机部署的 DSH）；失败 0；疑似空程序 0
@@ -32,7 +32,7 @@ ALL-TESTS-GREEN
 > 本机有部署时请贴「已跑 41；跳过 0」。
 
 ```bash
-$ node _deploy_diff.mjs
+$ node tests/_deploy_diff.mjs
 # 期望：末行 判定：ALL_MATCH（退出码 0）
 # 无参数 = 对拍全部 4 个插件；没有部署时它是 SKIP + 77，**不是** ALL_MATCH
 ```

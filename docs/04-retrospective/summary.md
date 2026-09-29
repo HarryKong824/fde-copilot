@@ -66,7 +66,7 @@
 
 | 常见做法 | 本项目的做法 |
 |---|---|
-| 「测试通过了」 | 「41 套全绿，退出码 0，`_run_all_tests.sh` 最后一行 `ALL-TESTS-GREEN`」 |
+| 「测试通过了」 | 「41 套全绿，退出码 0，`tests/_run_all_tests.sh` 最后一行 `ALL-TESTS-GREEN`」 |
 | 「没改动」 | 「源↔副本逐文件 SHA-256 MATCH，14 个文件全对」 |
 | 「链上有记录」 | 「`phase.jsonl` 第 119 行 `seq=119`，`decision=deny`」 |
 

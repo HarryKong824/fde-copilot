@@ -61,7 +61,7 @@
 | 项 | 内容 | 记录出处 |
 |---|---|---|
 | **三份审计链 schema 不统一** | gate 用 `type`/`tool`+`decision`/`event`；memory 用 **`kind`** ⇒ 排查脚本必须写 `x.type ?? x.kind` | [架构说明 §9](docs/01-overview/architecture.md) |
-| **`_replay_phase_audit.mjs` 崩溃零输出** | 遇坏 JSON 会 `SyntaxError` 崩溃 + **零输出** ⇒ **它恰恰是「链坏时才跑」的那个** ⇒ **报警能力为零** | [Bug 台账 A 级 #9](docs/02-development/issue-log.md) |
+| **`tools/_replay_phase_audit.mjs` 崩溃零输出** | 遇坏 JSON 会 `SyntaxError` 崩溃 + **零输出** ⇒ **它恰恰是「链坏时才跑」的那个** ⇒ **报警能力为零** | [Bug 台账 A 级 #9](docs/02-development/issue-log.md) |
 | **4 项功能未在真环境验完** | 见功能对照表 §4 | [功能对照表](docs/01-overview/feature-matrix.md) |
 | **无版本控制** | 7 天 35 次改动**无法逐行追溯** | [版本管理记录](docs/02-development/releases.md) |
 
