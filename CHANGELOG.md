@@ -12,7 +12,7 @@
 |---|---|
 | 四个插件版本号 | **全部停在 `0.0.1`**，开发期间**从未升过** |
 | 开发周期 | **7 天**（2026-09-23 — 09-29），期间 **35 次改动** |
-| **开发期间没有用 git** | 无 commit 历史、无 tag（**2026-09-29 交付时已补上**，见下方「交付后补做」） |
+| **开发期间没有用 git** | 无 commit 历史、无 tag（**2026-09-29 交付时已补上**，见下方「交付后补做」）<br>**交付仓库已是 git 仓库，并已打 `v0.0.1` 标签 + Release** |
 | 实际用的版本手段 | `_snapshots/<日期>-before/` **手工快照**（35 项） |
 
 **⇒ 本文的版本分组是「按开发阶段」划分的**，标识（如 `Stage 5`）**来自 `_inbox/` 的交接文档**，
@@ -75,6 +75,7 @@
 - **`.github/workflows/test.yml`** —— CI，每次推送自动跑那 41 套
 - **`_token_usage_report.mjs`** —— Token 用量统计工具（可移植版，无本机路径）
 - 仓库 topics（`ai-safety` / `guardrails` / `audit-trail` / `fail-closed` / `hash-chain` 等）
+- **`v0.0.1` 标签 + [Release](https://github.com/HarryKong824/fde-copilot/releases/tag/v0.0.1)** —— 交付时补打了版本点，使「现场装的是哪一版」从此**有坐标可指**（此前只能靠 `_snapshots/` 的人工快照，见 [版本管理记录](docs/02-development/releases.md)）
 
 ### 文档更正
 
