@@ -107,6 +107,26 @@ const waitFor = async (pred, timeoutMs = 3000, intervalMs = 10) => {
 }
 
 /**
+ * 🔴 `audit.record()` 写盘失败时**不是丢**，而是进内存 outbox，等生产里的
+ * `session/flush` 事件重放（见 `lib/audit.js` 的 `#degraded` / `flush()`，
+ * 监听器在 `lib/pre-execute.js` 的 `session/flush`）。
+ *
+ * 2026-10-24 实测到一种**假红**：一次瞬时写盘失败（Windows 上杀软/并发扫描很常见）
+ * 就会让 break-glass 记录留在 outbox 里，而本套件原来**从不触发 flush** ⇒
+ * 报成"监听器没写链"，实际产品会在会话结束时补写。
+ * ⇒ 这里像生产一样触发 flush，再等条件成立；真失败（flush 也写不进去）仍然红。
+ */
+const flushUntil = async (ctx, pred, timeoutMs = 3000) => {
+  const t0 = Date.now()
+  while (Date.now() - t0 < timeoutMs) {
+    ctx.fire('session/flush', {})
+    if (await waitFor(pred, 100)) return true
+    await new Promise((r) => setTimeout(r, 20))
+  }
+  return pred()
+}
+
+/**
  * 忠实模拟 Cordis 的 effect / on / inject 语义。
  * 🔴 关键：`effect(fn)` 里 `fn()` 的返回值**若是函数**，那是注销器，**只在 teardown 调用**。
  *    apply 期就调用它 = 监听器当场注销（P0-1）。
@@ -320,9 +340,15 @@ await t('[C] 收到事件 ⇒ 立即放行', () => {
   assertEq(ctxC.guards[0](hitProtected(ontoC)), undefined)
 })
 await t('[C] 收到事件 ⇒ **写进自己的链**（否则重启后放行全丢）', async () => {
-  await waitFor(() => chainRows(chainC).some((r) => r.type === 'break-glass' && r.id === recC.id))
+  // 先按生产路径重放 outbox（瞬时写盘失败时记录在内存里等 session/flush），再断言。
+  await flushUntil(ctxC, () => chainRows(chainC).some((r) => r.type === 'break-glass' && r.id === recC.id))
   const opens = chainRows(chainC).filter((r) => r.type === 'break-glass' && r.id === recC.id)
-  assertEq(opens.length, 1, `本链应有 1 条 open，实际 ${JSON.stringify(chainRows(chainC).map((r) => r.type))}`)
+  assertEq(
+    opens.length,
+    1,
+    `本链应有 1 条 open，实际 ${JSON.stringify(chainRows(chainC).map((r) => r.type))}` +
+      '（已触发 session/flush 重放；仍缺失 = 写盘持续失败，不是监听器没被调用）'
+  )
   // 字段名必须与 bg-mirror.restoreSync 读的**逐字对应**，少一个就是"重启后放行失效"
   for (const k of ['denyId', 'category', 'reason', 'at', 'expiresAt', 'anchor']) {
     assert(k in opens[0], `链记录缺字段 ${k} ⇒ 重启后该字段恢复不出来`)
@@ -343,10 +369,13 @@ await t('[D] 收到 resolved ⇒ 不再放行', () => {
   assert(typeof r === 'string' && r.length > 0, `应重新拦，实际 ${JSON.stringify(r)}`)
 })
 await t('[D] 收到 resolved ⇒ 本链新增一条 resolved（供下次重启恢复）', async () => {
-  await waitFor(() => chainRows(chainC).some((r) => r.type === 'break-glass-resolved' && r.id === recC.id))
+  await flushUntil(ctxC, () =>
+    chainRows(chainC).some((r) => r.type === 'break-glass-resolved' && r.id === recC.id)
+  )
   assert(
     chainRows(chainC).some((r) => r.type === 'break-glass-resolved' && r.id === recC.id),
-    JSON.stringify(chainRows(chainC).map((r) => r.type))
+    JSON.stringify(chainRows(chainC).map((r) => r.type)) +
+      '（已触发 session/flush 重放；仍缺失 = 写盘持续失败，不是监听器没被调用）'
   )
 })
 await t('[D] 重启后（重新 apply 同一条链）该记录恢复为**已补正**、不放行', () => {
