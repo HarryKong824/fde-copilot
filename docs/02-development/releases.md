@@ -13,7 +13,8 @@
 > `v0.0.1` 标签指向的提交比当时的 main **落后 9 个提交**，**不含**安全修复
 > （`state.yaml` 读坏时守卫 fail-open）、也不含仓库根目录整理。
 > ⇒ **下载 `v0.0.1` 得到的是有已知漏洞的旧代码**。
-> 已发布 [`v0.0.2`](https://github.com/HarryKong824/fde-copilot/releases/tag/v0.0.2) 指向当前 main；
+> 已发布 [`v0.0.2`](https://github.com/HarryKong824/fde-copilot/releases/tag/v0.0.2)，指向提交 `d2226a8b`（发布时的 main；
+> 之后 main 上只追加了测试/文档改动，产品代码未变）；
 > **`v0.0.1` 保持原样不动**（改公共 tag = 篡改历史，不做）。
 > 四个插件版本号已随 `v0.0.2` 从 `0.0.1` 升到 `0.0.2`（见 §一）。
 

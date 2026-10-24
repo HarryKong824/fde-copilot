@@ -85,8 +85,26 @@ async function t(name, fn) {
     lines.push(`      ${e && e.message ? e.message : String(e)}`)
   }
 }
-/** 让在途的 appendFile / fire-and-forget 的 promise 落地。 */
+/** 让在途的 appendFile / fire-and-forget 的 promise 落地（用于**没有可观测条件**的等待）。 */
 const settle = (ms = 60) => new Promise((r) => setTimeout(r, ms))
+
+/**
+ * 🔴 轮询到条件成立，而不是「睡固定毫秒再看」。
+ *
+ * 2026-10-24 实测：本套件原来在两处「写完链再 `settle(60)` 然后读链」——
+ * 机器负载高时（并行跑回归 / 杀软扫临时目录 / 同时在推大包）60ms 不够，
+ * 于是**正确的实现被判红**（把 `settle` 改成 0 稳定复现：`[C] 写进自己的链` 红）。
+ * 这种假红最危险：它会让人去"修"一个没坏的实现。
+ * ⇒ 一切「等异步落盘」都改成等到**可观测的链上条件**出现（默认 3s 上限）。
+ */
+const waitFor = async (pred, timeoutMs = 3000, intervalMs = 10) => {
+  const t0 = Date.now()
+  while (Date.now() - t0 < timeoutMs) {
+    if (pred()) return true
+    await new Promise((r) => setTimeout(r, intervalMs))
+  }
+  return pred()
+}
 
 /**
  * 忠实模拟 Cordis 的 effect / on / inject 语义。
@@ -301,7 +319,8 @@ await settle()
 await t('[C] 收到事件 ⇒ 立即放行', () => {
   assertEq(ctxC.guards[0](hitProtected(ontoC)), undefined)
 })
-await t('[C] 收到事件 ⇒ **写进自己的链**（否则重启后放行全丢）', () => {
+await t('[C] 收到事件 ⇒ **写进自己的链**（否则重启后放行全丢）', async () => {
+  await waitFor(() => chainRows(chainC).some((r) => r.type === 'break-glass' && r.id === recC.id))
   const opens = chainRows(chainC).filter((r) => r.type === 'break-glass' && r.id === recC.id)
   assertEq(opens.length, 1, `本链应有 1 条 open，实际 ${JSON.stringify(chainRows(chainC).map((r) => r.type))}`)
   // 字段名必须与 bg-mirror.restoreSync 读的**逐字对应**，少一个就是"重启后放行失效"
@@ -323,7 +342,8 @@ await t('[D] 收到 resolved ⇒ 不再放行', () => {
   const r = ctxC.guards[0](hitProtected(ontoC))
   assert(typeof r === 'string' && r.length > 0, `应重新拦，实际 ${JSON.stringify(r)}`)
 })
-await t('[D] 收到 resolved ⇒ 本链新增一条 resolved（供下次重启恢复）', () => {
+await t('[D] 收到 resolved ⇒ 本链新增一条 resolved（供下次重启恢复）', async () => {
+  await waitFor(() => chainRows(chainC).some((r) => r.type === 'break-glass-resolved' && r.id === recC.id))
   assert(
     chainRows(chainC).some((r) => r.type === 'break-glass-resolved' && r.id === recC.id),
     JSON.stringify(chainRows(chainC).map((r) => r.type))
