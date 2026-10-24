@@ -6,7 +6,7 @@
 > 每走到一个阶段，就按那个阶段该有的条件校验业务规则；改本体只能走唯一入口，改完还要过「规则可信度」校验。
 > **门禁与审计是保证 AI 不跑偏的实现机制，不是产品本身。**
 
-[![State](https://img.shields.io/badge/state-PoC%200.0.1-orange)](#项目状态)
+[![State](https://img.shields.io/badge/state-PoC%200.0.2-orange)](#项目状态)
 [![Tests](https://img.shields.io/badge/regression-41%20suites%20green-brightgreen)](docs/03-usage/deployment.md)
 [![Deps](https://img.shields.io/badge/runtime%20deps-zero-blue)](#零运行时依赖)
 [![AI](https://img.shields.io/badge/code-100%25%20AI--generated-purple)](#-ai-生成声明)
@@ -294,7 +294,7 @@ node tests/_deploy_diff.mjs      # 期望：ALL_MATCH
 
 | 维度 | 状态 |
 |---|---|
-| 版本 | **0.0.1**（PoC 阶段） |
+| 版本 | **0.0.2**（PoC 阶段；已发 [Release v0.0.2](https://github.com/HarryKong824/fde-copilot/releases/tag/v0.0.2)） |
 | 开发周期 | 2026-09-23 — 2026-09-29（**7 天**） |
 | 功能完成度 | 19 项中 **15 项活验完整**、4 项**部分完成**、**0 项未实现** |
 | 回归 | **41 套全绿** |

@@ -1,6 +1,6 @@
 {
   "name": "dsh-fde-dsl",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "private": true,
   "description": "FDE Copilot v3 — Ontology 受限 DSL 解析器 + D3 边界值反例验证器（Stage 3+4）",
   "type": "module",

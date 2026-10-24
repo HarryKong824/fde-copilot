@@ -1,6 +1,6 @@
 {
   "name": "dsh-fde-memory",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "private": true,
   "description": "FDE Copilot v3 — 记忆系统 v2（按域拆分 + SCHEMA_VERSION 链式迁移 + notes 溯源过期 + 置信度规则化推导）",
   "type": "module",

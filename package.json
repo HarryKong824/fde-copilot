@@ -1,6 +1,6 @@
 {
   "name": "fde-copilot",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "private": true,
   "description": "Palantir 式 FDE 交付自动化：用本体 + 15 个交付阶段驱动 AI 做客户交付，门禁与哈希链审计保证它不跑偏",
   "license": "MIT",
